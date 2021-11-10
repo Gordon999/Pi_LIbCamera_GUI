@@ -33,6 +33,3 @@ Download PiLibCamera.py and copy to /home/pi
 
 ![screenshot](screenshot.jpg)
 
-## Zoomed
-
-![screenshot](zoomed.jpg)
