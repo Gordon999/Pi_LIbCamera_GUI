@@ -1194,7 +1194,7 @@ while True:
                            zheight = igh - int(igh/20)
                        zxo = ((igw-zwidth)/2)/igw
                        zyo = ((igh-zheight)/2)/igh
-                       rpistr += " -roi " + str(zxo) + "," + str(zyo) + "," + str(zwidth/igw) + "," + str(zheight/igh)
+                       rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(zwidth/igw) + "," + str(zheight/igh)
                    if zoom == 10:
                        zxo = ((zx -((preview_width/2) / (igw/preview_width)))/preview_width)
                        zyo = ((zy -((preview_height/2) / (igh/preview_height)))/preview_height)
