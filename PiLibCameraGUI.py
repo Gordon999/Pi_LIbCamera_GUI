@@ -1226,7 +1226,7 @@ while True:
                    tcount = 0
                    if tinterval < 20:
                        text(0,0,6,2,1,"Please Wait, taking Timelapse ...",int(fv*1.7),1)
-                       rpistr = "libcamera-still -e " + extns[extn] + " -n -t " + str(tduration * 1000) + " --timelapse " + str(tinterval * 1000) + " -o /home/pi/Pictures/%04d.jpg -dt" 
+                       rpistr = "libcamera-still -e " + extns[extn] + " -n -t " + str(tduration * 1000) + " --timelapse " + str(tinterval * 1000) + " -o /home/pi/Pictures/%04d.jpg " 
                        rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
                        if zoom > 0:
                            rpistr += " --width " + str(preview_width) + " --height " + str(preview_height) 
