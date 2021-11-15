@@ -1312,7 +1312,7 @@ while True:
                                 timestamp = now.strftime("%y%m%d%H%M%S")
                                 if extns[extn] != 'raw':
                                     fname =  pic_dir + str(timestamp) + '_' + str(tcount) + '.' + extns2[extn]
-                                    rpistr = "libcamera-still -e " + extns2[extn] + " -n -t 1000 -o " + fname
+                                    rpistr = "libcamera-still -e " + extns[extn] + " -n -t 1000 -o " + fname
                                 else:
                                     fname =  pic_dir + str(timestamp) + '_' + str(tcount) + '.' + extns2[extn]
                                     rpistr = "libcamera-still -r -n -t 1000 -o " + fname
