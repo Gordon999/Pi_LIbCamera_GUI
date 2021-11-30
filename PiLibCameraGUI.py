@@ -127,9 +127,9 @@ sharpness   = config[22]
 denoise     = config[23]
 
 if codec > 0:
-    max_vformat == len(vformats)-1
+    max_vformat == len(vwidths)-1
 else:
-    max_format = 4
+    max_vformat = 4
 vwidth    = vwidths[vformat]
 vheight   = vheights[vformat]
 vfps      = v_max_fps[vformat]
@@ -1426,7 +1426,7 @@ while True:
                                 tduration = 1
                             now = datetime.datetime.now()
                             timestamp = now.strftime("%y%m%d%H%M%S")
-                            rpistr = "libcamera-vid --codec mjpeg -t " + str(tduration*1000) + " --segment 1 --width " + str(vwidth) + " --height " + str(vheight) + " -o /home/pi/Pictures/" + timestamp + "_%04d.jpg "
+                            rpistr = "libcamera-vid -n --codec mjpeg -t " + str(tduration*1000) + " --segment 1 --width " + str(vwidth) + " --height " + str(vheight) + " -o /home/pi/Pictures/" + timestamp + "_%04d.jpg "
                             rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
                             if mode == 0:
                                 rpistr += " --shutter " + str(sspeed) + " --framerate " + str(1000000/sspeed)
