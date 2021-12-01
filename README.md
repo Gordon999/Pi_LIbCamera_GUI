@@ -1,15 +1,16 @@
 # Pi_LibCamera_GUI
 
-# In development, therefore BETA, to work with RaspiOS based on BULLSEYE, using libcamera (NOT raspistill/raspivid).
-# At your own risk !!. Ensure you have any required software backed up.
+To work with RaspiOS based on BULLSEYE, using libcamera (NOT raspistill/raspivid).
+At your own risk !!. Ensure you have any required software backed up.
 
 Script to allow control of a Pi Camera. Will work with all models, v1, v2 & HQ
 
 Shows a reduced preview but saves stills at camera full resolution *, and videos at user set resolution *.
+Can also save timelapses, set Interval to 0 for fast capture (uses libcamera-vid).
 
 * Will save images and videos at preview size if zoom or focus button activated
 
-With a Pi HQ Camera will allow exposures upto 239 seconds.
+With a Pi HQ Camera will allow exposures upto 239 seconds. (Note v1 and v2 cameras limited to approx 1.1 seconds due to libcamera)
 
 Click mouse on the left of a button to decrease, right to increase or use the appropriate slider
 
@@ -19,9 +20,7 @@ Requires opencv installed  sudo apt-get install python3-opencv
 
 To install:
 
-Install latest RaspiOS based on Bullseye (tested with FULL 32bit version)
-
-sudo apt install libsdl2-ttf-2.0-0
+Install latest RaspiOS based on Bullseye (tested with FULL 32bit and 64bit versions)
 
 python3 -m pip install -U pygame --user
 
