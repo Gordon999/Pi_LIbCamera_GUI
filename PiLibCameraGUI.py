@@ -1174,7 +1174,7 @@ while True:
         
     #check for any mouse button presses
     for event in pygame.event.get():
-        if event.type == QUIT:
+        if event.type == pygame.QUIT:
             os.killpg(p.pid, signal.SIGTERM)
             pygame.quit()
         elif (event.type == MOUSEBUTTONUP):
