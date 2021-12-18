@@ -85,7 +85,7 @@ codecs2      = ['h264','mjpeg','data']
 meters       = ['centre','spot','average']
 awbs         = ['off','auto','incandescent','tungsten','fluorescent','indoor','daylight','cloudy']
 denoises     = ['off','cdn_off','cdn_fast','cdn_hq']
-still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,20,'brightness',-100,100,'contrast',0,200,'ev',-10,10,'blue',1,80,'red',1,80,'extn',0,len(extns)-1,'saturation',0,20,'meter',0,len(meters)-1,'awb',0,len(awbs)-1]
+still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,20,'brightness',-100,100,'contrast',0,140,'ev',-10,10,'blue',1,80,'red',1,80,'extn',0,len(extns)-1,'saturation',0,20,'meter',0,len(meters)-1,'awb',0,len(awbs)-1]
 video_limits = ['vlen',1,999,'fps',1,40,'vformat',0,4,'0',0,0,'sharpness',0,4,'denoise',0,len(denoises)-1,'zoom',0,4,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,'flicker',0,3,'codec',0,len(codecs)-1]
 
 # check config_file exists, if not then write default values
