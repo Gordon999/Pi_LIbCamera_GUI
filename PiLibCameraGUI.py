@@ -31,8 +31,8 @@ import glob
 
 # set displayed preview image size (must be less than screen size to allow for menu!!)
 # recommended 640x480, 800x600, 1280x960
-preview_width  = 800 
-preview_height = 600
+preview_width  = 640 
+preview_height = 480
 
 # set default values (see limits below)
 mode        = 1       # set camera mode ['manual','normal','sport'] 
