@@ -3,7 +3,7 @@
 To work with RaspiOS based on BULLSEYE, using libcamera (NOT raspistill/raspivid).
 At your own risk !!. Ensure you have any required software backed up.
 
-Script to allow control of a Pi Camera. Will work with all models, v1, v2 & HQ
+Script to allow control of a Pi Camera. Will work with all models, v1, v2 & HQ. Also Arducam 16MP Autofocus.
 
 Shows a reduced preview but saves stills at camera full resolution *, and videos at user set resolution *.
 Can also save timelapses, set Interval to 0 for fast capture (uses libcamera-vid).
