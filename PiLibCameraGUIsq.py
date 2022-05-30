@@ -323,7 +323,7 @@ def text(col,row,fColor,top,upd,msg,fsize,bkgnd_Color):
 
 def draw_bar(col,row,color,msg,value):
     print(col,row,color,msg,value)
-    global bw,bh,preview_width,still_limits,max_speed
+    # global bw,bh,preview_width,still_limits,max_speed
     for f in range(0,len(still_limits)-1,3):
         if still_limits[f] == msg:
             pmin = still_limits[f+1]
