@@ -7,6 +7,8 @@ Script to allow control of a Pi Camera. Will work with all models, v1, v2 & HQ.
 
 Also Arducam 16MP Autofocus. Click on FOCUS button to focus.
 
+For use with Hyperpixel square display set preview_width  = 720, preview_height = 540, sq_dis = 1 
+
 Shows a reduced preview but saves stills at camera full resolution *, and videos at user set resolution *.
 Can also save timelapses, set Interval to 0 for fast capture (uses libcamera-vid).
 
