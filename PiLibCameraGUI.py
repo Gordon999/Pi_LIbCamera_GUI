@@ -454,7 +454,7 @@ def preview():
     p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
     #print (rpistr)
     restart = 0
-    time.sleep(2)
+    time.sleep(.25)
 
 # draw buttons
 for d in range(1,13):
