@@ -15,10 +15,8 @@ If you want to capture high resolution images as fast as possible using Timelaps
 
 If using Arducam 16MP AF camera you will need more memory allocated to achieve full resolution. In /boot/config.txt set dtoverlay=vc4-kms-v3d,cma-512 and then reboot.
 
-Shows a reduced preview but saves stills at camera full resolution, and videos at user set resolution *.
+Shows a reduced preview but saves stills at camera full resolution, and videos at user set resolution.
 Can also save timelapses, set Interval to 0 for fast capture (uses libcamera-vid).
-
-* Will save images and videos at FULL RESOLUTION size even if zoom or focus button activated
 
 With a Pi HQ Camera will allow exposures upto 239 seconds. (Note v1 and v2 cameras limited to approx 1.1 seconds due to libcamera)
 
