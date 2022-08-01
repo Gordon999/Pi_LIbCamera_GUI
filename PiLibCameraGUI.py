@@ -602,8 +602,10 @@ while max_shutter > shutters[max_speed]:
 if Pi_Cam > 0:
     if Pi_Cam < 4:
         text(0,0,6,2,1,"Found Pi Camera v" + str(Pi_Cam),int(fv*1.7),1)
-    else:
+    elif Pi_Cam == 4:
         text(0,0,6,2,1,"Found Arducam 16MP Autofocus",int(fv*1.7),1)
+    else:
+        text(0,0,6,2,1,"Found Arducam 64MP Autofocus",int(fv*1.7),1)
     time.sleep(1)
 else:
     text(0,0,6,2,1,"No Pi Camera found",int(fv*1.7),1)
