@@ -11,7 +11,7 @@ For use with Hyperpixel square display set preview_width  = 720, preview_height 
 
 Pi4B recommended.
 
-If using Arducam 16MP AF camera you will need more memory allocated to achieve full resolution. In /boot/config.txt set dtoverlay=vc4-kms-v3d,cma-512 and then reboot.
+If using Arducam 16MP or 64MP AF camera you will need more memory allocated to achieve full resolution. In /boot/config.txt set dtoverlay=vc4-kms-v3d,cma-512 and then reboot.
 
 Shows a reduced preview but saves stills at camera full resolution, and videos at user set resolution.
 
