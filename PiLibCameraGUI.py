@@ -27,7 +27,7 @@ import signal
 import cv2
 import glob
 
-# version v2.9
+# version v2.9a
 
 # set displayed preview image size (must be less than screen size to allow for the menu!!)
 # recommended 640x480, 720x540 (FOR SQUARE HYPERPIXEL DISPLAY), 800x600, 1280x960
@@ -1639,6 +1639,8 @@ while True:
                         rpistr += " --saturation " + str(saturation/10)
                         rpistr += " --sharpness " + str(sharpness/10)
                         rpistr += " --denoise "    + denoises[denoise]
+                        if Pi_Cam == 5 and sspeed > 1000000 and mode == 0:
+                            rpistr += " --width 4624 --height 3472 " # use 16MP superpixel mode for higher light sensitivity
                         if Pi_Cam >= 4 and foc_man == 0:
                             rpistr += " --autofocus "
                         if zoom > 0 :
