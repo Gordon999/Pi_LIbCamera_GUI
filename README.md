@@ -21,8 +21,6 @@ Click mouse on the left of a button to decrease, right to increase or use the ap
 
 Always use the EXIT button to EXIT
 
-Requires opencv installed  sudo apt-get install python3-opencv
-
 To install:
 
 Install latest RaspiOS based on Bullseye (tested with FULL 32bit and 64bit versions)
@@ -33,7 +31,7 @@ sudo apt install libsdl-gfx1.2-5 libsdl-image1.2 libsdl-kitchensink1 libsdl-mixe
 
 sudo apt install python3-opencv
 
-Download PiLibCameraGUI.py and copy to /home/pi
+Download PiLibCameraGUI.py and copy to /home/pi (assuming your username is pi)
 
 ## Screenshot
 
