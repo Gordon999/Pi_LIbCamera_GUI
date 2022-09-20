@@ -76,11 +76,9 @@ vid         = "Videos"
 con_file    = "PiLCConfig7.txt"
 
 # setup directories
-Home_Files  = []
-Home_Files  = (os.listdir("/home"))
-pic_dir     = "/home/" + Home_Files[0]+ "/" + pic + "/"
-vid_dir     = "/home/" + Home_Files[0]+ "/" + vid + "/"
-config_file = "/home/" + Home_Files[0]+ "/" + con_file
+pic_dir     = os.environ["HOME"] + "/" + pic + "/"
+vid_dir     = os.environ["HOME"] + "/" + vid + "/"
+config_file = os.environ["HOME"] + "/" + con_file
 
 # Camera max exposure (Note v1 is currently 1 second not the raspistill 6 seconds)
 # whatever value set it MUST be in shutters list !!
