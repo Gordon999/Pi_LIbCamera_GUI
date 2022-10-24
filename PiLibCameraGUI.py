@@ -31,8 +31,8 @@ import glob
 
 # set displayed preview image size (must be less than screen size to allow for the menu!!)
 # recommended 640x480, 720x540 (FOR SQUARE HYPERPIXEL DISPLAY), 800x600, 1280x960
-preview_width  = 640
-preview_height = 480
+preview_width  = 800
+preview_height = 600
 
 # set sq_dis = 1 for a square display, 0 for normal
 sq_dis = 0
