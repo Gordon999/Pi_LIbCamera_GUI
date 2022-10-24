@@ -34,7 +34,7 @@ import glob
 preview_width  = 800
 preview_height = 600
 
-# set sq_dis = 1 for a square display, 0 for normal
+# set sq_dis = 1 for a square display, 0 for normal.
 sq_dis = 0
 
 
