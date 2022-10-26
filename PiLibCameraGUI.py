@@ -27,7 +27,7 @@ import signal
 import cv2
 import glob
 
-# version v3.4
+# version v3.5
 
 # set displayed preview image size (must be less than screen size to allow for the menu!!)
 # recommended 640x480, 720x540 (FOR SQUARE HYPERPIXEL DISPLAY), 800x600, 1280x960
