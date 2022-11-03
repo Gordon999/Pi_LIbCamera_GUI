@@ -246,6 +246,8 @@ if vformat > max_vformat:
 vwidth    = vwidths[vformat]
 vheight   = vheights[vformat]
 vfps      = v_max_fps[vformat]
+
+video_limits[5] = vfps
 if tinterval > 0:
     tduration = tinterval * tshots
 else:
