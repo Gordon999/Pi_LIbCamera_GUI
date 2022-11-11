@@ -24,14 +24,23 @@ Always use the EXIT button to EXIT
 To install:
 
 Install latest RaspiOS based on Bullseye (tested with FULL 32bit and 64bit versions)
-
+```bash
+sudo apt install python3 -y
 python3 -m pip install -U pygame --user
+sudo apt install libsdl-gfx1.2-5 libsdl-image1.2 libsdl-kitchensink1 libsdl-mixer1.2 libsdl-sound1.2 libsdl-ttf2.0-0 libsdl1.2debian libsdl2-2.0-0 libsdl2-gfx-1.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 -y
+sudo apt install python3-opencv -y
+```
+Let's download **PiLibCameraGUI.py** to our home directory
 
-sudo apt install libsdl-gfx1.2-5 libsdl-image1.2 libsdl-kitchensink1 libsdl-mixer1.2 libsdl-sound1.2 libsdl-ttf2.0-0 libsdl1.2debian libsdl2-2.0-0 libsdl2-gfx-1.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gordon999/Pi_LIbCamera_GUI/main/PiLibCameraGUI.py -o ~/PiLibCameraGUI.py
+```
 
-sudo apt install python3-opencv
-
-Download PiLibCameraGUI.py and copy to /home/pi (assuming your username is pi)
+Use the following commands to run it.
+  
+```bash
+python3 PiLibCameraGUI.py
+```
 
 ## Screenshot
 
