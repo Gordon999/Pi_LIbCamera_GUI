@@ -19,7 +19,7 @@ With a Pi HQ Camera will allow exposures upto 239 seconds. (Note v1 and v2 camer
 
 Click mouse on the left of a button to decrease, right to increase or use the appropriate slider
 
-Always use the EXIT button to EXIT
+ # Always use the EXIT button to EXIT
 
 To install:
 
