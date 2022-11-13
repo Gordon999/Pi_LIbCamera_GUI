@@ -22,7 +22,7 @@ Click mouse on the left of a button to decrease, right to increase or use the ap
  # Always use the EXIT button to EXIT
  ( or you will need to reboot your pi)
 
-To install:
+# To install:
 
 Install latest RaspiOS based on Bullseye (tested with FULL 32bit and 64bit versions)
 ```bash
