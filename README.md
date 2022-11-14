@@ -22,7 +22,7 @@ Click mouse on the left of a button to decrease, right to increase or use the ap
  # Always use the EXIT button to EXIT
  ( or you will need to reboot your pi)
 
-# To install:
+# To install(manual):
 
 Install latest RaspiOS based on Bullseye (tested with FULL 32bit and 64bit versions)
 ```bash
@@ -40,7 +40,14 @@ curl -fsSL https://raw.githubusercontent.com/Gordon999/Pi_LIbCamera_GUI/main/PiL
 Use the following commands to run it.
   
 ```bash
-python3 PiLibCameraGUI.py
+python3 ~/PiLibCameraGUI.py
+```
+
+
+# Auto Installation (Beta):
+
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/Gordon999/Pi_LIbCamera_GUI/main/install.sh)"
 ```
 
 ## Screenshot
