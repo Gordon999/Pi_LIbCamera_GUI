@@ -40,7 +40,7 @@ curl -fsSL https://raw.githubusercontent.com/Gordon999/Pi_LIbCamera_GUI/main/PiL
 Use the following commands to run it.
   
 ```bash
-python3 PiLibCameraGUI.py
+python3 ~/PiLibCameraGUI.py
 ```
 
 ## Screenshot
