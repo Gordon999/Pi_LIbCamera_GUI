@@ -1904,7 +1904,7 @@ while True:
                                 rpistr += " --exposure " + modes[mode]
                             if ev != 0:
                                 rpistr += " --ev " + str(ev)
-                            if sspeed > 5000000 and mode == 0:
+                            if sspeed > 5000000 and mode == 0 and Pi_Cam < 4:
                                 rpistr += " --gain 1 --awbgain 1,1 --immediate"
                             else:
                                 rpistr += " --gain " + str(gain)
@@ -1994,7 +1994,7 @@ while True:
                                 rpistr += " --exposure " + str(modes[mode]) + " --framerate " + str(fps)
                             if ev != 0:
                                 rpistr += " --ev " + str(ev)
-                            if sspeed > 5000000 and mode == 0:
+                            if sspeed > 5000000 and mode == 0 and Pi_Cam < 4:
                                 rpistr += " --gain 1 --awbgain 1,1 --immediate"
                             else:
                                 rpistr += " --gain " + str(gain)
