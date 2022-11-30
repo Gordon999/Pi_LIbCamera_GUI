@@ -1969,7 +1969,8 @@ while True:
                                                         button_column = 2
                                                         button_row = int(mousex / bw) + 8
                                                 if button_column == 2 and button_row == 9:
-                                                    os.system('pkill -SIGUSR2 libcamera-still')
+                                                    os.killpg(p.pid, signal.SIGTERM)
+                                                    #os.system('pkill -SIGUSR2 libcamera-still')
                                                     stop = 1
                                                     count = -1
                                     old_count = count
