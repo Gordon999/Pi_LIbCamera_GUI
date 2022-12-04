@@ -5,7 +5,7 @@ At your own risk !!. Ensure you have any required software backed up.
 
 Script to allow control of a Pi Camera. Will work with all models, v1, v2 & HQ. 
 
-Also Arducam 16MP and 64MP Autofocus. Click on FOCUS button to focus. This will show FOCUS MAN, which gives Manual Focusing, then click on 'slider' or the middle of the button, left or right for fine adjustment, to adjust Manual Focus. lt will show a value for focus in the top left corner, adjust for a maximum. Click on FOCUS MAN to go back to auto focus. 2x2 binning option for 64MP camera, Click on right hand side of the Capture Still or Capture Timelapse buttons. 
+Also Arducam 16MP and 64MP Autofocus. Click on FOCUS button to focus. This will show FOCUS MAN, which gives Manual Focusing, then click on 'slider' or the middle of the button, left or right for fine adjustment, to adjust Manual Focus. lt will show a value for focus in the top left corner, adjust for a maximum. Click on lower part of the button to go back to auto focus. 2x2 binning option for 64MP camera, Click on right hand side of the Capture Still or Capture Timelapse buttons. 
 
 For use with Hyperpixel square display set preview_width  = 720, preview_height = 540, sq_dis = 1 
 
