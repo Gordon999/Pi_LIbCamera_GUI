@@ -3,10 +3,11 @@
 To work with RaspiOS based on BULLSEYE, using libcamera (NOT raspistill/raspivid).
 At your own risk !!. Ensure you have any required software backed up.
 
-Script to allow control of a Pi Camera. Will work with all models, v1, v2 & HQ. 
+Script to allow control of a Pi Camera. Will work with all models, v1, v2, v3 & HQ. Also Arducam 16MP and 64MP Autofocus. 
 
-Also Arducam 16MP and 64MP Autofocus. Click on FOCUS button to focus. This will show FOCUS MAN, which gives Manual Focusing, then click on 'slider' or the middle of the button, left or right for fine adjustment, to adjust Manual Focus. lt will show a value for focus in the top left corner, adjust for a maximum. Click on lower part of the button to go back to auto focus. 
+With Pi V3 or Arducam 16/64MP Click on FOCUS button to focus. This will show FOCUS MAN, which gives Manual Focusing, then click on 'slider' or the middle of the button, left or right for fine adjustment, to adjust Manual Focus. lt will show a value for focus in the top left corner, adjust for a maximum. Click on lower part of the button to go back to auto focus. 
 
+HDR option for Pi v3 camera
 
 2x2 binning option for 64MP camera, Click on right hand side of the Capture Still or Capture Timelapse buttons. 
 
@@ -18,7 +19,7 @@ Shows a reduced preview but saves stills at camera full resolution, and videos a
 
 Can also save timelapses, set Interval to 0 for fast capture (uses libcamera-vid). If you want to capture high resolution images as fast as possible using Timelapse set Interval to 0, set Duration to required seconds, set V_FPS to max, set V_Coder to mjpeg, set V_Format to maximum value, click on CAPTURE Timelapse to start. The images will be in /home/.username./Pictures. If using Arducam 16MP or 64MP AF camera you will need more memory allocated to achieve full resolution if using Timelapse. In /boot/config.txt set dtoverlay=vc4-kms-v3d,cma-512 and then reboot. Note for fastest timelapse it uses libcamera-vid so not the highest quality images.
 
-With a Pi HQ Camera will allow exposures upto 239 seconds. (Note v1 and v2 cameras limited to approx 1.1 seconds due to libcamera), Arducam 16 and 64mp cameras upto 200 and 435 seconds.
+With a Pi HQ Camera will allow exposures upto 239 seconds. (Note Pi v1 limited to approx 1.1 seconds due to libcamera), Arducam 16 and 64mp cameras upto 200 and 435 seconds.
 
 Click mouse on the left of a button to decrease, right to increase or use the appropriate slider
 
