@@ -2234,7 +2234,7 @@ while True:
                                             if ww[4][0:12] == timestamp:
                                                 counts.append(pics3[xu])
                                         count = len(counts)
-                                        #show = 0
+                                        counts.sort()
                                         if (extns2[extn] == 'jpg' or extns2[extn] == 'bmp' or extns2[extn] == 'png') and count > 0 and show == 0:
                                             image = pygame.image.load(counts[count-1])
                                             if (Pi_Cam != 3) or (Pi_Cam == 3 and zoom == 5):
