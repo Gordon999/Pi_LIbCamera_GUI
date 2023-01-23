@@ -1,0 +1,2412 @@
+#!/usr/bin/env python3
+
+"""Copyright (c) 2023
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE."""
+
+import time
+import pygame
+from pygame.locals import *
+import os, sys
+import datetime
+import subprocess
+import signal
+import cv2
+import glob
+
+# version v4.14
+
+# set displayed preview image size (must be less than screen size to allow for the menu!!)
+# recommended 640x480, 720x540 (FOR SQUARE HYPERPIXEL DISPLAY), 800x600, 1280x960
+preview_width  = 800
+preview_height = 600
+
+# set sq_dis = 1 for a square display, 0 for normal
+sq_dis = 0
+
+
+# set default values (see limits below)
+mode        = 1       # set camera mode ['manual','normal','sport'] 
+speed       = 15      # position in shutters list (15 = 1/125th)
+gain        = 0       # set gain 
+brightness  = 0       # set camera brightness
+contrast    = 70      # set camera contrast 
+ev          = 0       # eV correction 
+blue        = 12      # blue balance 
+red         = 15      # red balance 
+extn        = 0       # still file type  (0 = jpg)
+vlen        = 10      # video length in seconds
+fps         = 25      # video fps
+vformat     = 7       # set video format (7 = 1920x1080)
+codec       = 0       # set video codec  (0 = h264)
+tinterval   = 5       # time between timelapse shots in seconds
+tshots      = 5       # number of timelapse shots
+frame       = 0       # set to 1 for no frame (i.e. if using Pi 7" touchscreen)
+saturation  = 10      # picture colour saturation
+meter       = 0       # metering mode ( 0 = centre)
+awb         = 1       # auto white balance mode, off, auto etc ( 1 = auto)
+sharpness   = 15      # set sharpness level
+denoise     = 1       # set denoise level
+quality     = 75      # set quality level
+profile     = 0       # set h264 profile
+level       = 0       # set h264 level
+foc_man     = 0
+prev_fps    = 10
+focus_fps   = 25
+focus_mode  = 0
+v3_f_mode   = 0
+v3_f_range  = 0
+v3_f_speed  = 0
+v3_focus    = 480
+v3_hdr      = 0
+vpreview    = 1
+
+# NOTE if you change any of the above defaults you need to delete the con_file and restart.
+
+# default directories and files
+pic         = "Pictures"
+vid         = "Videos"
+con_file    = "PiLCConfig8.txt"
+
+# setup directories
+Home_Files  = []
+Home_Files.append(os.getlogin())
+pic_dir     = "/home/" + Home_Files[0]+ "/" + pic + "/"
+vid_dir     = "/home/" + Home_Files[0]+ "/" + vid + "/"
+config_file = "/home/" + Home_Files[0]+ "/" + con_file
+
+# Camera max exposure (Note v1 is currently 1 second not the raspistill 6 seconds)
+# whatever value set it MUST be in shutters list !!
+max_v1      = 1
+max_v2      = 11
+max_v3      = 112
+max_hq      = 239
+max_16mp    = 200
+max_64mp    = 435
+
+# inital parameters
+zx          = int(preview_width/2)
+zy          = int(preview_height/2)
+zoom        = 0
+igw         = 2592
+igh         = 1944
+zwidth      = igw 
+zheight     = igh
+if tinterval > 0:
+    tduration  = tshots * tinterval
+else:
+    tduration = 5
+if sq_dis == 1:
+    dis_height = preview_width
+else:
+    dis_height = preview_height
+
+# set button sizes
+bw = int(preview_width/8)
+bh = int(preview_height/14)
+ft = int(preview_width/52)
+fv = int(preview_width/52)
+
+# data
+cameras      = ['No Camera','Pi v1','Pi v2','Pi v3','Pi HQ','Arducam 16MP','Arducam 64MP']
+modes        = ['manual','normal','sport']
+extns        = ['jpg','png','bmp','rgb','yuv420','raw']
+extns2       = ['jpg','png','bmp','data','data','dng']
+vwidths      = [640,720,800,1280,1280,1296,1536,1640,1920,2028,2304,2592,3280,3840,4032,4056,4608,4656,9152]
+vheights     = [480,540,600, 720, 960, 972, 864,1232,1080,1520,1296,1944,2464,2160,3024,3040,2592,3496,6944]
+v_max_fps    = [200,120, 40,  40,  40,  30,  30,  30,  30,  25,  25,  20,  20,  20,  20,  10,  20,  20,  20]
+v3_max_fps   = [200,120,125,  66,  50,  46,  47,  30,  30,  25,  25,  20,  20,  20,  20,  20,  15,  20,  20]
+zwidths      = [640,800,1280,2592,3280,4056,4656,9152]
+zheights     = [480,600, 960,1944,2464,3040,3496,6944]
+zws          = [864,1080,1728,2592,1093,1367,2187,3280,1536,1920,3072,4608,1352,1690,2704,4056,1552,1940,3104,4656,3050,3813,6101,9152]
+zhs          = [648, 810,1296,1944, 821,1027,1643,2464, 864,1080,1728,2592,1013,1267,2027,3040,1165,1457,2331,3496,2288,2860,4576,6944]
+shutters     = [-2000,-1600,-1250,-1000,-800,-640,-500,-400,-320,-288,-250,-240,-200,-160,-144,-125,-120,-100,-96,-80,-60,-50,-48,-40,-30,-25,-20,-15,-13,-10,-8,-6,-5,-4,-3,
+                0.4,0.5,0.6,0.8,1,1.1,1.2,2,3,4,5,6,7,8,9,10,11,15,20,25,30,40,50,60,75,100,112,120,150,200,220,230,239,435]
+codecs       = ['h264','mjpeg','yuv420','raw']
+codecs2      = ['h264','mjpeg','data','raw']
+h264profiles = ['baseline 4','baseline 4.1','baseline 4.2','main 4','main 4.1','main 4.2','high 4','high 4.1','high 4.2']
+meters       = ['centre','spot','average']
+awbs         = ['off','auto','incandescent','tungsten','fluorescent','indoor','daylight','cloudy']
+denoises     = ['off','cdn_off','cdn_fast','cdn_hq']
+v3_f_modes   = ['auto','manual','continuous']
+v3_f_ranges  = ['normal','macro','full']
+v3_f_speeds  = ['normal','fast']
+still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,20,'brightness',-100,100,'contrast',0,200,'ev',-10,10,'blue',1,80,'sharpness',0,30,'denoise',0,len(denoises)-1,'quality',0,100,'red',1,80,'extn',0,len(extns)-1,'saturation',0,20,'meter',0,len(meters)-1,'awb',0,len(awbs)-1]
+video_limits = ['vlen',1,999,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'zoom',0,5,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',300,960]
+
+# check config_file exists, if not then write default values
+if not os.path.exists(config_file):
+    points = [mode,speed,gain,brightness,contrast,frame,red,blue,ev,vlen,fps,vformat,codec,tinterval,tshots,extn,zx,zy,zoom,saturation,meter,awb,sharpness,denoise,quality,profile,level]
+    with open(config_file, 'w') as f:
+        for item in points:
+            f.write("%s\n" % item)
+
+# read config_file
+config = []
+with open(config_file, "r") as file:
+   line = file.readline()
+   while line:
+      config.append(line.strip())
+      line = file.readline()
+config = list(map(int,config))
+
+mode        = config[0]
+speed       = config[1]
+gain        = config[2]
+brightness  = config[3]
+contrast    = config[4]
+fullscreen  = config[5]
+red         = config[6]
+blue        = config[7]
+ev          = config[8]
+vlen        = config[9]
+fps         = config[10]
+vformat     = config[11]
+codec       = config[12]
+tinterval   = config[13]
+tshots      = config[14]
+extn        = config[15]
+zx          = config[16]
+zy          = config[17]
+zoom        = 0
+saturation  = config[19]
+meter       = config[20]
+awb         = config[21]
+sharpness   = config[22]
+denoise     = config[23]
+quality     = config[24]
+profile     = config[25]
+level       = config[26]
+
+# Check for Pi Camera version
+if os.path.exists('test.jpg'):
+   os.rename('test.jpg', 'oldtest.jpg')
+rpistr = "libcamera-jpeg -n -t 1000 -e jpg -o test.jpg "
+os.system(rpistr)
+rpistr = ""
+time.sleep(2)
+if os.path.exists('test.jpg'):
+   imagefile = 'test.jpg'
+   image = pygame.image.load(imagefile)
+   igw = image.get_width()
+   igh = image.get_height()
+   if igw == 2592:
+      Pi_Cam = 1
+      max_shutter = max_v1
+   elif igw == 3280:
+      Pi_Cam = 2
+      max_shutter = max_v2
+   elif igw == 4608:
+      Pi_Cam = 3
+      max_shutter = max_v3
+   elif igw == 4056:
+      Pi_Cam = 4
+      max_shutter = max_hq
+   elif igw == 4656:
+      Pi_Cam = 5
+      max_shutter = max_16mp
+   elif igw == 9152 or igw == 4624:
+      Pi_Cam = 6
+      max_shutter = max_64mp
+else:
+   Pi_Cam = 0
+   max_shutter = max_v1
+if Pi_Cam >= 5:
+    # read /boot/config.txt file
+    configtxt = []
+    with open("/boot/config.txt", "r") as file:
+        line = file.readline()
+        while line:
+            configtxt.append(line.strip())
+            line = file.readline()
+            
+# max video formats (not for h264)
+max_vf_6  = 17
+max_vf_5  = 11
+max_vf_4  = 15
+max_vf_3  = 16
+max_vf_2  = 12
+max_vf_1  = 11
+max_vf_4a = 10
+max_vf_0  = 8 # default if using h264
+
+if codec > 0 and Pi_Cam >= 5 and ("dtoverlay=vc4-kms-v3d,cma-512" in configtxt): # Arducam IMX519 16MP or 64MP
+    max_vformat = max_vf_6
+elif codec > 0 and Pi_Cam >= 5: # Arducam IMX519 16MP or 64MP
+    max_vformat = max_vf_5
+elif codec > 0 and Pi_Cam == 4: # Pi HQ
+    max_vformat = max_vf_4
+elif codec > 0 and Pi_Cam == 3: # Pi V3
+    max_vformat = max_vf_3
+elif codec > 0 and Pi_Cam == 2: # Pi V2
+    max_vformat = max_vf_2
+elif codec > 0 and Pi_Cam == 1: # Pi V1
+    max_vformat = max_vf_1
+elif Pi_Cam == 4:               # Pi HQ
+    max_vformat = max_vf_4a
+else:
+    max_vformat = max_vf_0
+if vformat > max_vformat:
+    vformat = max_vformat
+vwidth    = vwidths[vformat]
+vheight   = vheights[vformat]
+vfps      = v_max_fps[vformat]
+
+video_limits[5] = vfps
+if tinterval > 0:
+    tduration = tinterval * tshots
+else:
+    tduration = 5
+
+shutter = shutters[speed]
+if shutter < 0:
+    shutter = abs(1/shutter)
+sspeed = int(shutter * 1000000)
+if (shutter * 1000000) - int(shutter * 1000000) > 0.5:
+    sspeed +=1
+pygame.init()
+if frame == 0:
+    if sq_dis == 0:
+        windowSurfaceObj = pygame.display.set_mode((preview_width + (bw*2),dis_height  ), 0, 24)
+    else:
+        windowSurfaceObj = pygame.display.set_mode((preview_width,dis_height  ), 0, 24)
+else:
+    if sq_dis == 0:
+        windowSurfaceObj = pygame.display.set_mode((preview_width + (bw*2),dis_height), pygame.NOFRAME, 24)
+    else:
+        windowSurfaceObj = pygame.display.set_mode((preview_width,dis_height), pygame.NOFRAME, 24)
+pygame.display.set_caption('Pi LibCamera GUI - ' + cameras[Pi_Cam])
+
+global greyColor, redColor, greenColor, blueColor, dgryColor, lgrnColor, blackColor, whiteColor, purpleColor, yellowColor,lpurColor,lyelColor
+bredColor =   pygame.Color(255,   0,   0)
+lgrnColor =   pygame.Color(162, 192, 162)
+lpurColor =   pygame.Color(192, 162, 192)
+lyelColor =   pygame.Color(192, 192, 162)
+blackColor =  pygame.Color(  0,   0,   0)
+whiteColor =  pygame.Color(200, 200, 200)
+greyColor =   pygame.Color(128, 128, 128)
+dgryColor =   pygame.Color( 64,  64,  64)
+greenColor =  pygame.Color(  0, 255,   0)
+purpleColor = pygame.Color(255,   0, 255)
+yellowColor = pygame.Color(255, 255,   0)
+blueColor =   pygame.Color(  0,   0, 255)
+redColor =    pygame.Color(200,   0,   0)
+
+def button(col,row, bkgnd_Color,border_Color):
+    global preview_width,bw,bh,sq_dis
+    colors = [greyColor, dgryColor,yellowColor,purpleColor,greenColor,whiteColor,lgrnColor,lpurColor,lyelColor,blueColor]
+    Color = colors[bkgnd_Color]
+    if sq_dis == 0:
+        bx = preview_width + (col * bw)
+        by = row * bh
+    else:
+        if col == 0:
+            if row < 6:
+                bx = row * bw
+                by = preview_height
+            else:
+                bx = (row - 6) * bw
+                by = preview_height + bh
+        elif row < 7:
+            bx = row * bw
+            by = preview_height + (bh*2)
+        else:
+            bx = (row - 7) * bw
+            by = preview_height + (bh*3)
+    pygame.draw.rect(windowSurfaceObj,Color,Rect(bx,by,bw-1,bh))
+    pygame.draw.line(windowSurfaceObj,colors[border_Color],(bx,by),(bx+bw,by))
+    pygame.draw.line(windowSurfaceObj,greyColor,(bx+bw-1,by),(bx+bw-1,by+bh))
+    pygame.draw.line(windowSurfaceObj,colors[border_Color],(bx,by),(bx,by+bh-1))
+    pygame.draw.line(windowSurfaceObj,dgryColor,(bx,by+bh-1),(bx+bw-1,by+bh-1))
+    pygame.display.update(bx, by, bw, bh)
+    return
+
+def text(col,row,fColor,top,upd,msg,fsize,bkgnd_Color):
+    global bh,preview_width,fv
+    colors =  [dgryColor, greenColor, yellowColor, redColor, purpleColor, blueColor, whiteColor, greyColor, blackColor, purpleColor,lgrnColor,lpurColor,lyelColor]
+    Color  =  colors[fColor]
+    bColor =  colors[bkgnd_Color]
+    if sq_dis == 0:
+        bx = preview_width + (col * bw)
+        by = row * bh
+    else:
+        if col == 0:
+            if row < 6:
+                bx = row * bw
+                by = preview_height
+            else:
+                bx = (row - 6) * bw
+                by = preview_height + bh
+        elif row < 7:
+            bx = row * bw
+            by = preview_height + (bh*2)
+        else:
+            bx = (row - 7) * bw
+            by = preview_height + (bh*3)
+    if os.path.exists ('/usr/share/fonts/truetype/freefont/FreeSerif.ttf'): 
+        fontObj = pygame.font.Font('/usr/share/fonts/truetype/freefont/FreeSerif.ttf', int(fsize))
+    else:
+        fontObj = pygame.font.Font(None, int(fsize))
+    msgSurfaceObj = fontObj.render(msg, False, Color)
+    msgRectobj = msgSurfaceObj.get_rect()
+    if top == 0:
+        pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+1,by+int(bh/3),bw-2,int(bh/3)))
+        msgRectobj.topleft = (bx + 5, by + int(bh/3))
+    elif msg == "Config":
+        pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+1,by+int(bh/1.5),int(bw/2),int(bh/3)-1))
+        msgRectobj.topleft = (bx+5,  by + int(bh/1.5)-1)
+    elif top == 1:
+        pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+20,by+int(bh/1.5),int(bw-21),int(bh/3)-1))
+        msgRectobj.topleft = (bx + 20, by + int(bh/1.5)-1) 
+    elif top == 2:
+        if bkgnd_Color == 1:
+            pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,0,preview_width,fv*2))
+        msgRectobj.topleft = (0,row * fsize)
+    windowSurfaceObj.blit(msgSurfaceObj, msgRectobj)
+    if upd == 1 and top == 2:
+        pygame.display.update(0,0,preview_width,fv*2)
+    if upd == 1:
+        pygame.display.update(bx, by, bw, bh)
+
+def draw_bar(col,row,color,msg,value):
+    global bw,bh,preview_width,still_limits,max_speed
+    for f in range(0,len(still_limits)-1,3):
+        if still_limits[f] == msg:
+            pmin = still_limits[f+1]
+            pmax = still_limits[f+2]
+    if msg == "speed":
+        pmax = max_speed
+    if sq_dis == 0:
+        pygame.draw.rect(windowSurfaceObj,color,Rect(preview_width + col*bw,row * bh,bw-1,int(bh/3)))
+    else:
+        if row < 6:
+            pygame.draw.rect(windowSurfaceObj,color,Rect(row*bw,preview_height ,bw-1,int(bh/3)))
+        else:
+            pygame.draw.rect(windowSurfaceObj,color,Rect((row-6)*bw,preview_height + bh,bw-1,int(bh/3)))
+    if pmin > -1: 
+        j = value / (pmax - pmin)  * bw
+    else:
+        j = int(bw/2) + (value / (pmax - pmin)  * bw)
+    j = min(j,bw-5)
+    if sq_dis == 0:
+        pygame.draw.rect(windowSurfaceObj,(0,200,0),Rect(int(preview_width + int(col*bw) + 2),int(row * bh),int(j+1),int(bh/3)))
+        pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width + int(col*bw) + j ),int(row * bh),4,int(bh/3)))
+    else:
+        if row < 6:
+            pygame.draw.rect(windowSurfaceObj,(150,120,150),Rect(int((row*bw) + 2),preview_height ,int(j+1),int(bh/3)))
+            pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int((row*bw) + j) ,preview_height ,4,int(bh/3)))
+        else:
+            pygame.draw.rect(windowSurfaceObj,(150,120,150),Rect(int(((row-6)*bw) + 2),int(preview_height + bh),int(j+1),int(bh/3)))
+            pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(((row-6)*bw) + j) ,int(preview_height +  bh),4,int(bh/3)))
+    pygame.display.update()
+
+def draw_Vbar(col,row,color,msg,value):
+    global bw,bh,preview_width,video_limits
+    for f in range(0,len(video_limits)-1,3):
+        if video_limits[f] == msg:
+            pmin = video_limits[f+1]
+            pmax = video_limits[f+2]
+    if msg == "vformat":
+        pmax = max_vformat
+    if sq_dis == 0:
+        pygame.draw.rect(windowSurfaceObj,color,Rect(preview_width + col*bw,row * bh,bw-1,int(bh/3)))
+    else:
+        if row < 7:
+            pygame.draw.rect(windowSurfaceObj,color,Rect(row*bw,preview_height + (bh*2),bw-1,int(bh/3)))
+        else:
+            pygame.draw.rect(windowSurfaceObj,color,Rect((row-7)*bw,preview_height + (bh*3),bw-1,int(bh/3)))
+    if pmin > -1: 
+        j = value / (pmax - pmin)  * bw
+    else:
+        j = int(bw/2) + (value / (pmax - pmin)  * bw)
+    j = min(j,bw-5)
+    if sq_dis == 0:
+        pygame.draw.rect(windowSurfaceObj,(150,120,150),Rect(int(preview_width + (col*bw) + 2),int(row * bh),int(j+1),int(bh/3)))
+        pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width + (col*bw) + j ),int(row * bh),4,int(bh/3)))
+    else:
+        if row < 7:
+            pygame.draw.rect(windowSurfaceObj,(150,120,150),Rect(int((row*bw) + 2),int(preview_height + (bh*2)),int(j+1),int(bh/3)))
+            pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int((row*bw) + j) ,int(preview_height + (bh*2)),4,int(bh/3)))
+        else:
+            pygame.draw.rect(windowSurfaceObj,(150,120,150),Rect(int(((row-7)*bw) + 2),int(preview_height +  + (bh*3)),int(j+1),int(bh/3)))
+            pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(((row-7)*bw) + j) ,int(preview_height +  + (bh*3)),4,int(bh/3)))
+    pygame.display.update()
+
+def preview():
+    global v3_focus,v3_hdr,v3_f_mode,v3_f_modes,prev_fps,focus_fps,focus_mode,restart,rpistr,count,p, brightness,contrast,modes,mode,red,blue,gain,sspeed,ev,preview_width,preview_height,zoom,igw,igh,zx,zy,awbs,awb,saturations,saturation,meters,meter,flickers,flicker,sharpnesss,sharpness
+    files = glob.glob('/run/shm/*')
+    for f in files:
+        os.remove(f)
+    speed2 = sspeed
+    if speed2 > 1000000:
+        speed2 = 1000000
+    rpistr = "libcamera-vid -n --codec mjpeg -t 0 --segment 1 - s"
+    if Pi_Cam >= 5 and focus_mode == 1:
+        rpistr += " --width 3280 --height 2464 -o /run/shm/test%d.jpg "
+    elif Pi_Cam == 3 :
+         rpistr += " --width 2304 --height 1296 -o /run/shm/test%d.jpg "
+    elif Pi_Cam >= 5 or focus_mode == 1 :
+         rpistr += " --width 1920 --height 1440 -o /run/shm/test%d.jpg "
+    else:
+        if preview_width == 600 and preview_height == 480:
+            rpistr += " --width 720 --height 540 -o /run/shm/test%d.jpg "
+        else:
+            rpistr += " --width 1920 --height 1440 -o /run/shm/test%d.jpg "
+    rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
+    if mode == 0:
+        rpistr += " --shutter " + str(speed2)
+    else:
+        rpistr += " --exposure " + str(modes[mode]) 
+    if zoom > 4 and Pi_Cam < 5 and Pi_Cam != 3 and mode != 0:
+        rpistr += " --framerate " + str(focus_fps)
+    elif (zoom < 5 or Pi_Cam == 3) and mode != 0:
+        rpistr += " --framerate " + str(prev_fps)
+    elif mode == 0:
+        speed3 = 1000000/speed2
+        speed3 = min(speed3,25)
+        rpistr += " --framerate " + str(speed3)
+    if ev != 0:
+        rpistr += " --ev " + str(ev)
+    if sspeed > 5000000 and mode == 0:
+        rpistr += " --gain 1 --awbgain 1,1 "
+    else:
+        rpistr += " --gain " + str(gain)
+        if awb == 0:
+            rpistr += " --awbgains " + str(red/10) + "," + str(blue/10)
+        else:
+            rpistr += " --awb " + awbs[awb]
+    rpistr += " --metering "   + meters[meter]
+    rpistr += " --saturation " + str(saturation/10)
+    rpistr += " --sharpness "  + str(sharpness/10)
+    rpistr += " --denoise "    + denoises[denoise]
+    rpistr += " --quality " + str(quality)
+    if Pi_Cam >= 5 and foc_man == 0:
+        rpistr += " --autofocus "
+    if Pi_Cam == 3 and v3_f_mode > 0 :
+        rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
+    if Pi_Cam == 3 and v3_hdr == 1:
+        rpistr += " --hdr"
+    if zoom > 1 and zoom < 5:
+        zxo = ((1920-zwidths[4 - zoom])/2)/1920
+        zyo = ((1440-zheights[4 - zoom])/2)/1440
+        rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(zwidths[4 - zoom]/1920) + "," + str(zheights[4 - zoom]/1440)
+    if zoom == 5:
+        zxo = ((igw/2)-(preview_width/2))/igw
+        zyo = ((igh/2)-(preview_height/2))/igh
+        rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)
+    p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
+    #print (rpistr)
+    restart = 0
+    time.sleep(0.2)
+
+# draw buttons
+for d in range(1,13):
+        button(0,d,6,4)
+for d in range(1,7):
+        button(1,d,7,3)
+for d in range(10,13):
+        button(1,d,8,2)
+if Pi_Cam == 3:
+    button(0,13,6,4)
+button(0,0,0,4)
+button(1,0,0,3)
+button(1,7,0,2)
+button(1,9,0,2)
+button(1,13,0,5)
+
+# write button texts
+text(0,0,1,0,1,"CAPTURE",ft,7)
+if Pi_Cam == 6 and mode == 0:
+    text(0,0,1,1,1,"STILL    2x2",ft,7)
+else:
+    text(0,0,1,1,1,"Still ",ft,7)
+text(1,0,1,0,1,"CAPTURE",ft,7)
+text(1,0,1,1,1,"Video",ft,7)
+text(0,1,5,0,1,"Mode",ft,10)
+text(0,1,3,1,1,modes[mode],fv,10)
+if mode == 0:
+    text(0,2,5,0,1,"Shutter S",ft,10)
+    if shutters[speed] < 0:
+        text(0,2,3,1,1,"1/" + str(abs(shutters[speed])),fv,10)
+    else:
+        text(0,2,3,1,1,str(shutters[speed]),fv,10)
+else:
+    text(0,2,5,0,1,"eV",ft,10)
+    text(0,2,3,1,1,str(ev),fv,10)
+text(0,3,5,0,1,"Gain",ft,10)
+text(0,3,3,1,1,str(gain),fv,10)
+text(0,4,5,0,1,"Brightness",ft,10)
+text(0,4,3,1,1,str(brightness/100)[0:4],fv,10)
+text(0,5,5,0,1,"Contrast",ft,10)
+text(0,5,3,1,1,str(contrast/100)[0:4],fv,10)
+if awb == 0:
+    text(0,7,5,0,1,"Blue",ft,10)
+    text(0,8,5,0,1,"Red",ft,10)
+    text(0,8,3,1,1,str(red/10)[0:3],fv,10)
+    text(0,7,3,1,1,str(blue/10)[0:3],fv,10)
+else:
+    text(0,7,5,0,1,"Denoise",fv,10)
+    text(0,7,3,1,1,denoises[denoise],fv,10)
+    text(0,8,5,0,1,"Sharpness",fv,10)
+    text(0,8,3,1,1,str(sharpness/10),fv,10)
+text(0,10,5,0,1,"Quality",ft,10)
+text(0,10,3,1,1,str(quality)[0:3],fv,10)
+text(0,9,5,0,1,"File Format",ft,10)
+text(0,9,3,1,1,extns[extn],fv,10)
+button(1,7,0,9)
+text(1,7,5,0,1,"FOCUS",ft,7)
+if zoom == 0:
+    button(1,8,0,9)
+    text(1,8,5,0,1,"Zoom",ft,7)
+    text(1,8,3,1,1,"",fv,7)
+    text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
+elif zoom < 10:
+    button(1,8,1,9)
+    text(1,8,2,0,1,"ZOOMED",ft,0)
+    text(1,8,3,1,1,str(zoom),fv,0)
+    text(1,3,3,1,1,str(preview_width) + "x" + str(preview_height),fv,11)
+text(0,6,5,0,1,"AWB",ft,10)
+text(0,6,3,1,1,awbs[awb],fv,10)
+text(0,11,5,0,1,"Saturation",fv,10)
+text(0,11,3,1,1,str(saturation/10),fv,10)
+text(0,12,5,0,1,"Metering",fv,10)
+text(0,12,3,1,1,meters[meter],fv,10)
+
+if Pi_Cam == 3:
+    text(0,13,5,0,1,"HDR",fv,10)
+    if v3_hdr == 0:
+        text(0,13,3,1,1,"Off",fv,10)
+    else:
+        text(0,13,3,1,1,"ON ",fv,10)
+text(1,1,5,0,1,"V_Length S",ft,11)
+text(1,1,3,1,1,str(vlen),fv,11)
+text(1,2,5,0,1,"V_FPS",ft,11)
+text(1,2,3,1,1,str(fps),fv,11)
+text(1,3,5,0,1,"V_Format",ft,11)
+text(1,4,5,0,1,"V_Codec",ft,11)
+text(1,4,3,1,1,codecs[codec],fv,11)
+text(1,5,5,0,1,"h264 Profile",ft,11)
+text(1,5,3,1,1,str(h264profiles[profile]),fv,11)
+text(1,6,5,0,1,"V_Preview",ft,11)
+text(1,6,3,1,1,"ON ",fv,11)
+text(1,9,1,0,1,"CAPTURE",ft,7)
+if Pi_Cam == 6 and mode == 0 and tinterval > 0:
+    text(1,9,1,1,1,"T'lapse  2x2",ft,7)
+else:
+    text(1,9,1,1,1,"Timelapse",ft,7)
+text(1,10,5,0,1,"Duration S",ft,12)
+text(1,10,3,1,1,str(tduration),fv,12)
+text(1,11,5,0,1,"Interval S",ft,12)
+text(1,11,3,1,1,str(tinterval),fv,12)
+text(1,12,5,0,1,"No. of Shots",ft,12)
+if tinterval > 0:
+    text(1,12,3,1,1,str(tshots),fv,12)
+else:
+    text(1,12,3,1,1," ",fv,12)
+text(1,13,2,0,1,"Save      EXIT",fv,7)
+text(1,13,2,1,1,"Config",fv,7)
+
+# draw sliders
+draw_bar(0,1,lgrnColor,'mode',mode)
+draw_bar(0,3,lgrnColor,'gain',gain)
+draw_bar(0,4,lgrnColor,'brightness',brightness)
+draw_bar(0,5,lgrnColor,'contrast',contrast)
+if mode != 0:
+    draw_bar(0,2,lgrnColor,'ev',ev)
+if awb == 0:
+    draw_bar(0,7,lgrnColor,'blue',blue)
+    draw_bar(0,8,lgrnColor,'red',red)
+else:
+    draw_bar(0,7,lgrnColor,'denoise',denoise)
+    draw_bar(0,8,lgrnColor,'sharpness',sharpness)
+draw_bar(0,10,lgrnColor,'quality',quality)
+draw_bar(0,9,lgrnColor,'extn',extn)
+draw_bar(0,6,lgrnColor,'awb',awb)
+draw_bar(0,11,lgrnColor,'saturation',saturation)
+draw_bar(0,12,lgrnColor,'meter',meter)
+draw_Vbar(1,1,lpurColor,'vlen',vlen)
+draw_Vbar(1,2,lpurColor,'fps',fps)
+draw_Vbar(1,3,lpurColor,'vformat',vformat)
+draw_Vbar(1,4,lpurColor,'codec',codec)
+draw_Vbar(1,5,lpurColor,'profile',profile)
+draw_Vbar(1,8,greyColor,'zoom',zoom)
+draw_Vbar(1,10,lyelColor,'tduration',tduration)
+draw_Vbar(1,11,lyelColor,'tinterval',tinterval)
+draw_Vbar(1,12,lyelColor,'tshots',tshots)
+
+
+
+text(0,0,6,2,1,"Please Wait, checking camera",int(fv* 1.7),1)
+pygame.display.update()
+
+# determine max speed for camera
+max_speed = 0
+while max_shutter > shutters[max_speed]:
+    max_speed +=1
+    
+text(0,0,6,2,1,"Found " + str(cameras[Pi_Cam]),int(fv*1.7),1)
+time.sleep(1)
+    
+# set maximum speed, based on camera version
+if speed > max_speed:
+    speed = max_speed
+    shutter = shutters[speed]
+    if shutter < 0:
+        shutter = abs(1/shutter)
+    sspeed = int(shutter * 1000000)
+    if mode == 0:
+        if shutters[speed] < 0:
+            text(0,2,3,1,1,"1/" + str(abs(shutters[speed])),fv,10)
+        else:
+            text(0,2,3,1,1,str(shutters[speed]),fv,10)
+    else:
+        if shutters[speed] < 0:
+            text(0,2,0,1,1,"1/" + str(abs(shutters[speed])),fv,10)
+        else:
+            text(0,2,0,1,1,str(shutters[speed]),fv,10)
+if mode == 0:
+    draw_bar(0,2,lgrnColor,'speed',speed)
+pygame.display.update()
+time.sleep(.25)
+
+xx = int(preview_width/2)
+xy = int(preview_height/2)
+
+# start preview
+text(0,0,6,2,1,"Please Wait for preview...",int(fv*1.7),1)
+preview()
+
+# main loop
+while True:
+    time.sleep(0.1)
+    pics = glob.glob('/run/shm/*.jpg')
+    if len(pics) > 1:
+        try:
+            image = pygame.image.load(pics[1])
+            for tt in range(1,len(pics)):
+                 os.remove(pics[tt])
+        except pygame.error:
+            pass
+        if Pi_Cam == 3 and zoom < 5:
+            image = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
+        else:
+            image = pygame.transform.scale(image, (preview_width,preview_height))
+        windowSurfaceObj.blit(image, (0,0))
+        if zoom > 0 or foc_man == 1:
+            image2 = pygame.surfarray.pixels3d(image)
+            crop2 = image2[xx-50:xx+50,xy-50:xy+50]
+            gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
+            foc = cv2.Laplacian(gray, cv2.CV_64F).var()
+            text(20,0,3,2,0,"Focus: " + str(int(foc)),fv* 2,0)
+            pygame.draw.line(windowSurfaceObj,redColor,(xx-25,xy),(xx+25,xy),1)
+            pygame.draw.line(windowSurfaceObj,redColor,(xx,xy-25),(xx,xy+25),1)
+        else:
+            text(0,0,6,2,0,"Preview",fv* 2,0)
+            zxp = (zx -((preview_width/2) / (igw/preview_width)))
+            zyp = (zy -((preview_height/2) / (igh/preview_height)))
+            zxq = (zx - zxp) * 2
+            zyq = (zy - zyp) * 2
+            if zxp + zxq > preview_width:
+                zx = preview_width - int(zxq/2)
+                zxp = (zx -((preview_width/2) / (igw/preview_width)))
+                zxq = (zx - zxp) * 2
+            if zyp + zyq > preview_height:
+                zy = preview_height - int(zyq/2)
+                zyp = (zy -((preview_height/2) / (igh/preview_height)))
+                zyq = (zy - zyp) * 2
+            if zxp < 0:
+                zx = int(zxq/2) + 1
+                zxp = 0
+                zxq = (zx - zxp) * 2
+            if zyp < 0:
+                zy = int(zyq/2) + 1
+                zyp = 0
+                zyq = (zy - zyp) * 2
+            if preview_width < 800:
+                gw = 2
+            else:
+                gw = 1
+            if Pi_Cam >= 5:
+                if vwidth == 1280 and vheight == 960:
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.20),int(preview_height * 0.22),int(preview_width * 0.62),int(preview_height * 0.57)),gw)
+                elif vwidth == 1280 and vheight == 720:
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.22),int(preview_height * 0.30),int(preview_width * 0.56),int(preview_height * 0.41)),gw)
+                elif (vwidth == 1296 and vheight == 972) or (vwidth == 2592 and vheight == 1944):
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.19),int(preview_height * 0.16),int(preview_width * 0.62),int(preview_height * 0.64)),gw)
+                elif vwidth == 800 and vheight == 600:
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.30),int(preview_height * 0.30),int(preview_width * 0.41),int(preview_height * 0.41)),gw)
+                elif vwidth == 640 and vheight == 480:
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.30),int(preview_height * 0.30),int(preview_width * 0.41),int(preview_height * 0.41)),gw)
+                elif (vwidth == 1920 and vheight == 1080) or (vwidth == 3840 and vheight == 2160):
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.09),int(preview_height * 0.20),int(preview_width * 0.82),int(preview_height * 0.62)),gw)
+            else:
+                if Pi_Cam == 1 and ((vwidth == 1920 and vheight == 1080) or (vwidth == 1280 and vheight == 720) or (vwidth == 1536 and vheight == 864)):
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.13),int(preview_height * 0.22),int(preview_width * 0.74),int(preview_height * 0.57)),gw)
+                elif Pi_Cam == 2 and ((vwidth == 1920 and vheight == 1080) or (vwidth == 1280 and vheight == 720) or (vwidth == 1536 and vheight == 864)):
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.2),int(preview_height * 0.28),int(preview_width * 0.60),int(preview_height * 0.45)),gw)
+                elif Pi_Cam == 2 and ((vwidth == 640 and vheight == 480) or (vwidth == 720 and vheight == 540)):
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.30),int(preview_height * 0.30),int(preview_width * 0.41),int(preview_height * 0.41)),gw)
+                elif Pi_Cam == 3 and ((vwidth == 640 and vheight == 480) or (vwidth == 1296 and vheight == 972) or (vwidth == 1280 and vheight == 960)):
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.25),int(preview_height * 0.17),int(preview_width * 0.50),int(preview_height * 0.46)),gw)
+                elif Pi_Cam == 3 and ((vwidth == 800 and vheight == 600) or (vwidth == 720 and vheight == 540)):
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.25),int(preview_height * 0.17),int(preview_width * 0.50),int(preview_height * 0.46)),gw)
+                elif Pi_Cam == 3 and ((vwidth == 1280 and vheight == 720) or (vwidth == 1536 and vheight == 864)):
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.175),int(preview_height * 0.15),int(preview_width * 0.66),int(preview_height * 0.48)),gw)
+                elif Pi_Cam == 3 and vwidth == 1640 and vheight == 1232:
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.12),0,int(preview_width * 0.75),int(preview_height * 0.75)),gw)
+        pygame.display.update()
+    
+    # continuously read mouse buttons
+    buttonx = pygame.mouse.get_pressed()
+    if buttonx[0] != 0 :
+        pos = pygame.mouse.get_pos()
+        mousex = pos[0]
+        mousey = pos[1]
+        if (mousex > preview_width) or (sq_dis == 1 and mousey > preview_height):
+          if mousex > preview_width:
+              button_column = int((mousex-preview_width)/bw) + 1
+              button_row = int((mousey)/bh) + 1
+              if mousex > preview_width + bw:
+                  if mousex > preview_width + bw + (bw/2):
+                      button_pos = 3
+                  else:
+                      button_pos = 2
+              elif mousex > preview_width + (bw/2):
+                  button_pos = 1
+              else:
+                  button_pos = 0
+              
+          else:
+              if mousey - preview_height < bh:
+                  button_column = 1
+                  button_row = int(mousex / bw) + 1
+                  if mousex > ((button_row -1) * bw) + (bw/2):
+                      button_pos = 1
+                  else:
+                      button_pos = 0
+              elif mousey - preview_height < bh * 2:
+                  button_column = 1
+                  button_row = int(mousex / bw) + 7
+                  if mousex > ((button_row - 7) * bw) + (bw/2):
+                      button_pos = 1
+                  else:
+                      button_pos = 0
+              elif mousey - preview_height < bh * 3:
+                  button_column = 2
+                  button_row = int(mousex / bw) + 1
+                  if mousex > ((button_row -1) * bw) + (bw/2):
+                      button_pos = 1
+                  else:
+                      button_pos = 0
+              elif mousey - preview_height < bh * 4:
+                  button_column = 2
+                  button_row = int(mousex / bw) + 8
+                  if mousex > ((button_row - 8) * bw) + (bw/2):
+                      button_pos = 1
+                  else:
+                      button_pos = 0
+  
+          if button_column == 1:
+            if button_row == 2:
+                # MODE
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'mode':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    mode = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height  and mousey < preview_height + int(bh/3)):
+                    mode = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        mode -=1
+                        mode  = max(mode ,pmin)
+                    else:
+                        mode  +=1
+                        mode = min(mode ,pmax)
+                if mode == 0:
+                    text(0,2,5,0,1,"Shutter S",ft,10)
+                    draw_bar(0,2,lgrnColor,'speed',speed)
+                    if shutters[speed] < 0:
+                        text(0,2,3,1,1,"1/" + str(abs(shutters[speed])),fv,10)
+                    else:
+                        text(0,2,3,1,1,str(shutters[speed]),fv,10)
+                else:
+                    text(0,2,5,0,1,"eV",ft,10)
+                    text(0,2,3,1,1,str(ev),fv,10)
+                    draw_bar(0,2,lgrnColor,'ev',ev)
+                if Pi_Cam == 5 and mode == 0:
+                    text(0,0,1,1,1,"STILL    2x2",ft,7)
+                else:
+                    text(0,0,1,1,1,"Still ",ft,7)
+                if Pi_Cam == 5 and mode == 0 and tinterval > 0:
+                    text(1,9,1,1,1,"T'lapse  2x2",ft,7)
+                else:
+                    text(1,9,1,1,1,"Timelapse",ft,7)
+                text(0,1,3,1,1,modes[mode],fv,10)
+                draw_bar(0,1,lgrnColor,'mode',mode)
+                text(1,11,3,1,1,str(tinterval),fv,12)
+                draw_Vbar(1,10,lyelColor,'tinterval',tinterval)
+                if tinterval > 0:
+                    tduration = tinterval * tshots
+                if mode == 0 and tinterval == 0 :
+                    speed = 15
+                    shutter = shutters[speed]
+                    if shutter < 0:
+                        shutter = abs(1/shutter)
+                    sspeed = int(shutter * 1000000)
+                    if (shutter * 1000000) - int(shutter * 1000000) > 0.5:
+                        sspeed +=1
+                    if shutters[speed] < 0:
+                        text(0,2,3,1,1,"1/" + str(abs(shutters[speed])),fv,10)
+                    else:
+                        text(0,2,3,1,1,str(shutters[speed]),fv,10)
+                    draw_bar(0,2,lgrnColor,'speed',speed)
+
+                time.sleep(.25)
+                restart = 1
+
+            elif button_row == 3:
+                # SHUTTER SPEED or EV
+                if mode == 0 :
+                    for f in range(0,len(still_limits)-1,3):
+                        if still_limits[f] == 'speed':
+                            pmin = still_limits[f+1]
+                            pmax = max_speed
+                    if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                        speed = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                    elif (mousey > preview_height  and mousey < preview_height + int(bh/3)):
+                        speed = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                    else:
+                        if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                            speed -=1
+                            speed  = max(speed ,pmin)
+                        else:
+                            speed  +=1
+                            speed = min(speed ,pmax)
+                    shutter = shutters[speed]
+                    if shutter < 0:
+                        shutter = abs(1/shutter)
+                    sspeed = int(shutter * 1000000)
+                    if (shutter * 1000000) - int(shutter * 1000000) > 0.5:
+                        sspeed +=1
+                    if shutters[speed] < 0:
+                        text(0,2,3,1,1,"1/" + str(abs(shutters[speed])),fv,10)
+                    else:
+                        text(0,2,3,1,1,str(shutters[speed]),fv,10)
+                    draw_bar(0,2,lgrnColor,'speed',speed)
+                    if tinterval > 0:
+                        tinterval = int(sspeed/1000000)
+                        tinterval = max(tinterval,1)
+                        text(1,11,3,1,1,str(tinterval),fv,12)
+                        draw_Vbar(1,11,lyelColor,'tinterval',tinterval)
+                        tduration = tinterval * tshots
+                        text(1,10,3,1,1,str(tduration),fv,12)
+                        draw_Vbar(1,10,lyelColor,'tduration',tduration)
+                        
+                    time.sleep(.25)
+                    restart = 1
+                else:
+                    # EV
+                    for f in range(0,len(still_limits)-1,3):
+                        if still_limits[f] == 'ev':
+                            pmin = still_limits[f+1]
+                            pmax = still_limits[f+2]
+                    if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                        ev = int(((mousex-preview_width) / bw) * (pmax+1-pmin)) + pmin 
+                    elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                        ev = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin)) + pmin 
+                    else:
+                        if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                            ev -=1
+                            ev  = max(ev ,pmin)
+                        else:
+                            ev  +=1
+                            ev = min(ev ,pmax)
+                    text(0,2,3,1,1,str(ev),fv,10)
+                    draw_bar(0,2,lgrnColor,'ev',ev)
+                    time.sleep(0.25)
+                    restart = 1
+                    
+            elif button_row == 4:
+                # GAIN
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'gain':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    gain = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height  and mousey < preview_height + int(bh/3)):
+                    gain = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        gain -=1
+                        gain  = max(gain ,pmin)
+                    else:
+                        gain  +=1
+                        gain = min(gain ,pmax)
+                text(0,3,3,1,1,str(gain),fv,10)
+                time.sleep(.25)
+                draw_bar(0,3,lgrnColor,'gain',gain)
+                restart = 1
+                
+            elif button_row == 5:
+                # BRIGHTNESS
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'brightness':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    brightness = int(((mousex-preview_width) / bw) * (pmax+1-pmin)) + pmin 
+                elif (mousey > preview_height  and mousey < preview_height + int(bh/3)):
+                    brightness = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin)) + pmin 
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        brightness -=1
+                        brightness  = max(brightness ,pmin)
+                    else:
+                        brightness  +=1
+                        brightness = min(brightness ,pmax)
+                text(0,4,3,1,1,str(brightness/100),fv,10)
+                draw_bar(0,4,lgrnColor,'brightness',brightness)
+                time.sleep(0.025)
+                restart = 1
+                
+            elif button_row == 6:
+                # CONTRAST
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'contrast':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    contrast = int(((mousex-preview_width) / bw) * (pmax+1-pmin)) 
+                elif (mousey > preview_height  and mousey < preview_height + int(bh/3)):
+                    contrast = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        contrast -=1
+                        contrast  = max(contrast ,pmin)
+                    else:
+                        contrast  +=1
+                        contrast = min(contrast ,pmax)
+                text(0,5,3,1,1,str(contrast/100)[0:4],fv,10)
+                draw_bar(0,5,lgrnColor,'contrast',contrast)
+                time.sleep(0.025)
+                restart = 1
+                
+                
+            elif button_row == 8 and awb == 0:
+                # BLUE
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'blue':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    blue = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    blue = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        blue -=1
+                        blue  = max(blue ,pmin)
+                    else:
+                        blue  +=1
+                        blue = min(blue ,pmax)
+                text(0,7,3,1,1,str(blue/10)[0:3],fv,10)
+                draw_bar(0,7,lgrnColor,'blue',blue)
+                time.sleep(.25)
+                restart = 1
+
+            elif button_row == 11:
+                # QUALITY
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'quality':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    quality = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    quality = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        quality -=1
+                        quality  = max(quality ,pmin)
+                    else:
+                        quality  +=1
+                        quality = min(quality ,pmax)
+                text(0,10,3,1,1,str(quality)[0:3],fv,10)
+                draw_bar(0,10,lgrnColor,'quality',quality)
+                time.sleep(.25)
+                restart = 1
+
+            elif button_row == 9 and awb == 0 :
+                # RED
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'red':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    red = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    red = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        red -=1
+                        red  = max(red ,pmin)
+                    else:
+                        red  +=1
+                        red = min(red ,pmax)
+                text(0,8,3,1,1,str(red/10)[0:3],fv,10)
+                draw_bar(0,8,lgrnColor,'red',red)
+                time.sleep(.25)
+                restart = 1
+
+            elif button_row == 8 and awb != 0:
+                # DENOISE
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'denoise':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    denoise = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + (bh)  and mousey < preview_height + (bh) + int(bh/3)):
+                    denoise = int(((mousex-((button_row -7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        denoise -=1
+                        denoise = max(denoise,pmin)
+                    else:
+                        denoise +=1
+                        denoise = min(denoise,pmax)
+                text(0,7,3,1,1,denoises[denoise],fv,10)
+                draw_bar(0,7,lgrnColor,'denoise',denoise)
+                time.sleep(.25)
+                restart = 1
+
+            elif button_row == 9 and awb != 0:
+                # SHARPNESS
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'sharpness':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    sharpness = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + (bh)  and mousey < preview_height + (bh) + int(bh/3)):
+                    sharpness = int(((mousex-((button_row -7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        sharpness -=1
+                        sharpness = max(sharpness,pmin)
+                    else:
+                        sharpness +=1
+                        sharpness = min(sharpness,pmax)
+                        
+                text(0,8,3,1,1,str(sharpness/10),fv,10)
+                draw_bar(0,8,lgrnColor,'sharpness',sharpness)
+                time.sleep(.25)
+                restart = 1
+                
+            elif button_row == 10:
+                # EXTN
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'extn':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    extn = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    extn = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        extn -=1
+                        extn  = max(extn ,pmin)
+                    else:
+                        extn  +=1
+                        extn = min(extn ,pmax) 
+                text(0,9,3,1,1,extns[extn],fv,10)
+                draw_bar(0,9,lgrnColor,'extn',extn)
+                time.sleep(.25)
+                
+            elif button_row == 7:
+                # AWB
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'awb':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    awb = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    awb = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        awb -=1
+                        awb  = max(awb ,pmin)
+                    else:
+                        awb  +=1
+                        awb = min(awb ,pmax)
+                text(0,6,3,1,1,awbs[awb],fv,10)
+                draw_bar(0,6,lgrnColor,'awb',awb)
+                if awb == 0:
+                    text(0,7,5,0,1,"Blue",ft,10)
+                    text(0,8,5,0,1,"Red",ft,10)
+                    text(0,8,3,1,1,str(red/10)[0:3],fv,10)
+                    text(0,7,3,1,1,str(blue/10)[0:3],fv,10)
+                    draw_bar(0,7,lgrnColor,'blue',blue)
+                    draw_bar(0,8,lgrnColor,'red',red)
+                else:
+                    text(0,7,5,0,1,"Denoise",fv,10)
+                    text(0,7,3,1,1,denoises[denoise],fv,10)
+                    text(0,8,5,0,1,"Sharpness",fv,10)
+                    text(0,8,3,1,1,str(sharpness/10),fv,10)
+                    draw_bar(0,7,lgrnColor,'denoise',denoise)
+                    draw_bar(0,8,lgrnColor,'sharpness',sharpness)
+                time.sleep(.25)
+                restart = 1
+                
+            elif button_row == 12:
+                # SATURATION
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'saturation':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    saturation = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    saturation = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        saturation -=1
+                        saturation  = max(saturation ,pmin)
+                    else:
+                        saturation  +=1
+                        saturation = min(saturation ,pmax)
+                text(0,11,3,1,1,str(saturation/10),fv,10)
+                draw_bar(0,11,lgrnColor,'saturation',saturation)
+                time.sleep(.25)
+                restart = 1
+                
+            elif button_row == 13:
+                # METER
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'meter':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    meter = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    meter = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        meter -=1
+                        meter  = max(meter ,pmin)
+                    else:
+                        meter  +=1
+                        meter = min(meter ,pmax)
+                text(0,12,3,1,1,meters[meter],fv,10)
+                draw_bar(0,12,lgrnColor,'meter',meter)
+                time.sleep(.25)
+                restart = 1
+
+            elif button_row == 14 and Pi_Cam == 3:
+                if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                    v3_hdr -=1
+                    v3_hdr  = max(v3_hdr ,0)
+                else:
+                    v3_hdr  +=1
+                    v3_hdr = min(v3_hdr ,1)
+
+                text(0,13,5,0,1,"HDR",fv,10)
+                if v3_hdr == 0:
+                    text(0,13,3,1,1,"Off",fv,10)
+                else:
+                    text(0,13,3,1,1,"ON ",fv,10)
+                time.sleep(0.25)
+                restart = 1
+                
+          elif button_column == 2:
+            if button_row == 2:
+                # VIDEO LENGTH
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'vlen':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    vlen = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height  + (bh*2) and mousey < preview_height + (bh*2) + int(bh/3)):
+                    vlen = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        vlen -=1
+                        vlen  = max(vlen ,pmin)
+                    else:
+                        vlen  +=1
+                        vlen = min(vlen ,pmax)
+                text(1,1,3,1,1,str(vlen),fv,11)
+                draw_Vbar(1,1,lpurColor,'vlen',vlen)
+                time.sleep(.25)
+ 
+            elif button_row == 3:
+                # FPS
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'fps':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    fps = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                    fps = min(fps,vfps)
+                    fps = max(fps,pmin)
+                elif (mousey > preview_height  + (bh*2) and mousey < preview_height + (bh*2) + int(bh/3)):
+                    fps = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                    fps = min(fps,vfps)
+                    fps = max(fps,pmin)
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        fps -=1
+                        fps  = max(fps ,pmin)
+                    else:
+                        fps  +=1
+                        fps = min(fps ,pmax)
+                
+                text(1,2,3,1,1,str(fps),fv,11)
+                draw_Vbar(1,2,lpurColor,'fps',fps)
+                time.sleep(.25)
+                restart = 1
+                   
+            elif button_row == 4:
+                # VFORMAT
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'vformat':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    if codec > 0 and Pi_Cam >= 5 and ("dtoverlay=vc4-kms-v3d,cma-512" in configtxt): # Arducam IMX519 16MP OR 64MP
+                        max_vformat = max_vf_6
+                    elif codec > 0 and Pi_Cam >= 5: # Arducam IMX519 16MP or 64MP
+                        max_vformat = max_vf_5
+                    elif codec > 0 and Pi_Cam == 4:
+                        max_vformat = max_vf_4
+                    elif codec > 0 and Pi_Cam == 3:
+                        max_vformat = max_vf_3
+                    elif codec > 0 and Pi_Cam == 2:
+                        max_vformat = max_vf_2
+                    elif codec > 0 and Pi_Cam == 1:
+                        max_vformat = max_vf_1
+                    elif Pi_Cam == 4:
+                        max_vformat = max_vf_4a
+                    else:
+                        max_vformat = max_vf_0
+                    pmax = max_vformat
+                    vformat = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height  + (bh*2) and mousey < preview_height + (bh*2) + int(bh/3)):
+                    if codec > 0 and Pi_Cam >= 5 and ("dtoverlay=vc4-kms-v3d,cma-512" in configtxt): # Arducam IMX519 16MP OR 64MP
+                        max_vformat = max_vf_6
+                    elif codec > 0 and Pi_Cam >= 5: # Arducam IMX519 16MP or 64MP
+                        max_vformat = max_vf_5
+                    elif codec > 0 and Pi_Cam == 4:
+                        max_vformat = max_vf_4
+                    elif codec > 0 and Pi_Cam == 3:
+                        max_vformat = max_vf_3
+                    elif codec > 0 and Pi_Cam == 2:
+                        max_vformat = max_vf_2
+                    elif codec > 0 and Pi_Cam == 1:
+                        max_vformat = max_vf_1
+                    elif Pi_Cam == 4:
+                        max_vformat = max_vf_4a
+                    else:
+                        max_vformat = max_vf_0
+                    pmax = max_vformat
+                    vformat = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        vformat -=1
+                        if codec > 0 and Pi_Cam >= 5 and ("dtoverlay=vc4-kms-v3d,cma-512" in configtxt): # Arducam IMX519 16MP OR 64MP
+                            max_vformat = max_vf_6
+                        elif codec > 0 and Pi_Cam >= 5: # Arducam IMX519 16MP or 64MP
+                            max_vformat = max_vf_5
+                        elif codec > 0 and Pi_Cam == 4:
+                            max_vformat = max_vf_4
+                        elif codec > 0 and Pi_Cam == 3:
+                            max_vformat = max_vf_3
+                        elif codec > 0 and Pi_Cam == 2:
+                            max_vformat = max_vf_2
+                        elif codec > 0 and Pi_Cam == 1:
+                            max_vformat = max_vf_1
+                        elif Pi_Cam == 4:
+                            max_vformat = max_vf_4a
+                        else:
+                            max_vformat = max_vf_0
+                        vformat = min(vformat,max_vformat)
+                        vformat = max(vformat,pmin)
+                    else:
+                        vformat +=1
+                        if codec > 0 and Pi_Cam >= 5 and ("dtoverlay=vc4-kms-v3d,cma-512" in configtxt): # Arducam IMX519 16MP OR 64MP
+                            max_vformat = max_vf_6
+                        elif codec > 0 and Pi_Cam >= 5: # Arducam IMX519 16MP or 64MP
+                            max_vformat = max_vf_5
+                        elif codec > 0 and Pi_Cam == 4:
+                            max_vformat = max_vf_4
+                        elif codec > 0 and Pi_Cam == 3:
+                            max_vformat = max_vf_3
+                        elif codec > 0 and Pi_Cam == 2:
+                            max_vformat = max_vf_2
+                        elif codec > 0 and Pi_Cam == 1:
+                            max_vformat = max_vf_1
+                        elif Pi_Cam == 4:
+                            max_vformat = max_vf_4a
+                        else:
+                            max_vformat = max_vf_0
+                        vformat = min(vformat,max_vformat)
+                draw_Vbar(1,3,lpurColor,'vformat',vformat)
+                vwidth  = vwidths[vformat]
+                vheight = vheights[vformat]
+                if Pi_Cam == 3:
+                    vfps = v3_max_fps[vformat]
+                    if vwidth == 1920 and codec == 0:
+                        prof = h264profiles[profile].split(" ")
+                        if str(prof[1]) == "4.2":
+                            if vpreview == 1:
+                                vfps = 45
+                            else:
+                                vfps = 60
+                    elif vwidth == 1536 and codec == 0:
+                        prof = h264profiles[profile].split(" ")
+                        if str(prof[1]) == "4.2":
+                            if vpreview == 1:
+                                vfps = 60
+                            else:
+                                vfps = 90
+                else:
+                    vfps = v_max_fps[vformat]
+                fps = min(fps,vfps)
+                video_limits[5] = vfps
+                text(1,2,3,1,1,str(fps),fv,11)
+                draw_Vbar(1,2,lpurColor,'fps',fps)
+                text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
+                time.sleep(.25)
+
+            elif button_row == 5:
+                # CODEC
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'codec':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    codec = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + (bh*2) and mousey < preview_height + (bh*2) + int(bh/3)):
+                    codec = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        codec -=1
+                        codec  = max(codec ,pmin)
+                    else:
+                        codec  +=1
+                        codec = min(codec ,pmax)
+                if codec > 0 and Pi_Cam >= 5 and ("dtoverlay=vc4-kms-v3d,cma-512" in configtxt): # Arducam IMX519 16MP OR 64MP
+                    max_vformat = max_vf_6
+                elif codec > 0 and Pi_Cam >= 5: # Arducam IMX519 16MP or 64MP
+                    max_vformat = max_vf_5
+                elif codec > 0 and Pi_Cam == 4: # PI HQ
+                    max_vformat = max_vf_4
+                elif codec > 0 and Pi_Cam == 3: # PI V3
+                    max_vformat = max_vf_3
+                elif codec > 0 and Pi_Cam == 2: # PI V2
+                    max_vformat = max_vf_2
+                elif codec > 0 and Pi_Cam == 1: # PI V1
+                    max_vformat = max_vf_1
+                elif Pi_Cam == 4:
+                    max_vformat = max_vf_4a
+                else:
+                    max_vformat = max_vf_0
+                vformat = min(vformat,max_vformat)
+                text(1,4,3,1,1,codecs[codec],fv,11)
+                draw_Vbar(1,4,lpurColor,'codec',codec)
+                draw_Vbar(1,3,lpurColor,'vformat',vformat)
+                vwidth  = vwidths[vformat]
+                vheight = vheights[vformat]
+                if Pi_Cam == 3:
+                    vfps = v3_max_fps[vformat]
+                    if vwidth == 1920 and codec == 0:
+                        prof = h264profiles[profile].split(" ")
+                        if str(prof[1]) == "4.2":
+                            if vpreview == 1:
+                                vfps = 45
+                            else:
+                                vfps = 60
+                    elif vwidth == 1536 and codec == 0:
+                        prof = h264profiles[profile].split(" ")
+                        if str(prof[1]) == "4.2":
+                            if vpreview == 1:
+                                vfps = 60
+                            else:
+                                vfps = 90
+                else:
+                    vfps = v_max_fps[vformat]
+                fps = min(fps,vfps)
+                video_limits[5] = vfps
+                text(1,2,3,1,1,str(fps),fv,11)
+                draw_Vbar(1,2,lpurColor,'fps',fps)
+                text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
+                time.sleep(.25)
+
+            elif button_row == 6:
+                # H264 PROFILE
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'profile':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    profile = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + (bh*2) and mousey < preview_height + (bh*2) + int(bh/3)):
+                    profile = int(((mousex-((button_row - 1)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        profile -=1
+                        profile  = max(profile ,pmin)
+                    else:
+                        profile  +=1
+                        profile = min(profile ,pmax)
+                text(1,5,3,1,1,h264profiles[profile],fv,11)
+                draw_Vbar(1,5,lpurColor,'profile',profile)
+                vwidth  = vwidths[vformat]
+                vheight = vheights[vformat]
+                if Pi_Cam == 3:
+                    vfps = v3_max_fps[vformat]
+                    if vwidth == 1920 and codec == 0:
+                        prof = h264profiles[profile].split(" ")
+                        if str(prof[1]) == "4.2":
+                            if vpreview == 1:
+                                vfps = 45
+                            else:
+                                vfps = 60
+                    elif vwidth == 1536 and codec == 0:
+                        prof = h264profiles[profile].split(" ")
+                        if str(prof[1]) == "4.2":
+                            if vpreview == 1:
+                                vfps = 60
+                            else:
+                                vfps = 90
+                else:
+                    vfps = v_max_fps[vformat]
+                fps = min(fps,vfps)
+                video_limits[5] = vfps
+                text(1,2,3,1,1,str(fps),fv,11)
+                draw_Vbar(1,2,lpurColor,'fps',fps)
+                time.sleep(.25)
+
+            elif button_row == 7:
+                # V_PREVIEW
+                if (sq_dis == 0 and mousex > preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                    vpreview +=1
+                    vpreview  = min(vpreview ,1)
+                else:
+                    vpreview  -=1
+                    vpreview = max(vpreview ,0)
+
+                if vpreview == 0:
+                    text(1,6,3,1,1,"Off",fv,11)
+                else:
+                    text(1,6,3,1,1,"ON ",fv,11)
+                vwidth  = vwidths[vformat]
+                vheight = vheights[vformat]
+                if Pi_Cam == 3:
+                    vfps = v3_max_fps[vformat]
+                    if vwidth == 1920 and codec == 0:
+                        prof = h264profiles[profile].split(" ")
+                        if str(prof[1]) == "4.2":
+                            if vpreview == 1:
+                                vfps = 45
+                            else:
+                                vfps = 60
+                    elif vwidth == 1536 and codec == 0:
+                        prof = h264profiles[profile].split(" ")
+                        if str(prof[1]) == "4.2":
+                            if vpreview == 1:
+                                vfps = 60
+                            else:
+                                vfps = 90
+                else:
+                    vfps = v_max_fps[vformat]
+                fps = min(fps,vfps)
+                video_limits[5] = vfps
+                text(1,2,3,1,1,str(fps),fv,11)
+                draw_Vbar(1,2,lpurColor,'fps',fps)
+                time.sleep(0.25)
+
+            elif button_row == 8:
+                # FOCUS
+                if Pi_Cam == 3:
+                    for f in range(0,len(video_limits)-1,3):
+                        if video_limits[f] == 'v3_focus':
+                            pmin = video_limits[f+1]
+                            pmax = video_limits[f+2]
+                if Pi_Cam == 5:
+                    for f in range(0,len(video_limits)-1,3):
+                        if video_limits[f] == 'focus':
+                            pmin = video_limits[f+1]
+                            pmax = video_limits[f+2]
+                if (mousex > preview_width + bw and mousey < ((button_row-1)*bh) + (bh/3)) and Pi_Cam >= 5 and foc_man == 1:
+                    focus = int(((mousex-preview_width-bw) / bw) * pmax)
+                    draw_Vbar(1,7,dgryColor,'focus',focus)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                    text(1,7,3,1,1,str(focus),fv,0)
+                elif mousex > preview_width + bw and mousey > ((button_row-1)*bh) + (bh/3) and mousey < ((button_row-1)*bh) + (bh/1.5) and Pi_Cam >= 5 and foc_man == 1:
+                    if button_pos == 2:
+                        focus -= 10
+                    elif button_pos == 3:
+                        focus += 10
+                    draw_Vbar(1,7,dgryColor,'focus',focus)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                    text(1,7,3,1,1,str(focus),fv,0)
+
+                elif (mousey > preview_height + (bh*3) and mousey < preview_height + (bh*3) + (bh/3)) and Pi_Cam >= 5 and foc_man == 1:
+                    focus = int(((mousex-((button_row - 8)*bw)) / bw)* pmax)
+                    draw_Vbar(1,7,dgryColor,'focus',focus)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                    text(1,7,3,1,1,str(focus),fv,0)
+                elif mousey > preview_height + (bh*3) and mousey > preview_height + (bh*3) + (bh/3) and mousey < preview_height + (bh*3) + (bh/1.5) and Pi_Cam >= 5 and foc_man == 1:
+                    if button_pos == 0:
+                        focus -= 10
+                    elif button_pos == 1:
+                        focus += 10
+                    draw_Vbar(1,7,dgryColor,'focus',focus)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                    text(1,7,3,1,1,str(focus),fv,0)
+                # new v3
+                elif (mousex > preview_width + bw and mousey < ((button_row-1)*bh) + (bh/3)) and Pi_Cam == 3 and foc_man == 1:
+                    v3_focus = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin)) + pmin
+                    draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
+                    text(1,7,3,1,1,str(v3_focus),fv,0)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
+                elif mousex > preview_width + bw and mousey > ((button_row-1)*bh) + (bh/3) and mousey < ((button_row-1)*bh) + (bh/1.5) and Pi_Cam == 3  and foc_man == 1:
+                    if button_pos == 2:
+                        v3_focus -= 1
+                        v3_focus = max(v3_focus,pmin)
+                    elif button_pos == 3:
+                        v3_focus += 1
+                        v3_focus = min(v3_focus,pmax)
+                    draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
+                    text(1,7,3,1,1,str(int(v3_focus)),fv,0)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
+
+                elif (mousey > preview_height + (bh*3) and mousey < preview_height + (bh*3) + (bh/3)) and Pi_Cam == 3 and foc_man == 1:
+                    v3_focus = int(((mousex-((button_row - 8)*bw)) / bw)* pmax)
+                    draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
+                    text(1,7,3,1,1,str(int(v3_focus)),fv,0)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
+                elif mousey > preview_height + (bh*3) and mousey > preview_height + (bh*3) + (bh/3) and mousey < preview_height + (bh*3) + (bh/1.5) and Pi_Cam == 3 and foc_man == 1:
+                    if button_pos == 0:
+                        v3_focus -= 1
+                        v3_focus = max(v3_focus,0.0)
+                    elif button_pos == 1:
+                        v3_focus += 1
+                    draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
+                    text(1,7,3,1,1,str(int(v3_focus)),fv,0)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
+                    
+                elif ((sq_dis == 0 and button_pos > 1) or (sq_dis == 1 and button_pos == 0)):
+                    if (Pi_Cam < 3 or Pi_Cam == 4) and focus_mode == 0:
+                        zoom = 4
+                        focus_mode = 1
+                        button(1,7,1,9)
+                        text(1,7,3,0,1,"FOCUS",ft,0)
+                        text(1,3,3,1,1,str(preview_width) + "x" + str(preview_height),fv,11)
+                        button(1,8,1,9)
+                        text(1,8,2,0,1,"ZOOMED",ft,0)
+                        text(1,8,3,1,1,str(zoom),fv,0)
+                        time.sleep(0.25)
+                        restart = 1
+                    elif (Pi_Cam < 3 or Pi_Cam == 4) and focus_mode == 1:
+                        zoom = 0
+                        focus_mode = 0
+                        button(1,7,0,9)
+                        text(1,7,5,0,1,"FOCUS",ft,7)
+                        text(1,7,3,1,1,"",fv,7)
+                        text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
+                        button(1,8,0,9)
+                        text(1,8,5,0,1,"Zoom",ft,7)
+                        text(1,8,3,1,1,"",fv,7)
+                        restart = 1
+                    elif Pi_Cam == 3 and foc_man == 0:
+                        focus_mode = 1
+                        v3_f_mode = 1
+                        foc_man = 1 # manual focus
+                        button(1,7,1,9)
+                        text(1,7,3,0,1,"FOCUS MAN",ft,0)
+                        if os.path.exists("ctrls.txt"):
+                            os.remove("ctrls.txt")
+                        os.system("v4l2-ctl -d /dev/v4l-subdev1 --list-ctrls >> ctrls.txt")
+                        restart = 1
+                        time.sleep(0.25)
+                        ctrlstxt = []
+                        with open("ctrls.txt", "r") as file:
+                            line = file.readline()
+                            while line:
+                                ctrlstxt.append(line.strip())
+                                line = file.readline()
+                        foc_ctrl = ctrlstxt[3].split('value=')
+                        v3_focus = int(foc_ctrl[1])
+                        restart = 1 
+                        os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
+                        draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
+                        text(1,7,3,1,1,str(int(v3_focus)),fv,0)
+                        time.sleep(0.25)
+                    elif Pi_Cam >= 5 and foc_man == 0:
+                        focus_mode = 1
+                        foc_man = 1 # manual focus
+                        button(1,7,1,9)
+                        text(1,7,3,0,1,"FOCUS MAN",ft,0)
+                        if os.path.exists("ctrls.txt"):
+                            os.remove("ctrls.txt")
+                        os.system("v4l2-ctl -d /dev/v4l-subdev1 --list-ctrls >> ctrls.txt")
+                        restart = 1
+                        time.sleep(0.25)
+                        ctrlstxt = []
+                        with open("ctrls.txt", "r") as file:
+                            line = file.readline()
+                            while line:
+                                ctrlstxt.append(line.strip())
+                                line = file.readline()
+                        foc_ctrl = ctrlstxt[3].split('value=')
+                        focus = int(foc_ctrl[1])
+                        os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                        text(1,7,3,1,1,str(focus),fv,0)
+                        draw_Vbar(1,7,dgryColor,'focus',focus)
+                        time.sleep(0.25)
+                    elif Pi_Cam >= 5 and foc_man == 1:
+                        focus_mode = 0
+                        foc_man = 0
+                        zoom = 0
+                        button(1,7,0,9)
+                        text(1,7,5,0,1,"FOCUS",ft,7)
+                        text(1,7,3,1,1,"",fv,7)
+                        button(1,8,0,9)
+                        text(1,8,5,0,1,"Zoom",ft,7)
+                        text(1,8,3,1,1,"",fv,7)
+                        text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
+                        time.sleep(0.25)
+                        restart = 1
+                    elif Pi_Cam == 3 and foc_man == 1:
+                        focus_mode = 0
+                        v3_f_mode = 0
+                        foc_man = 0
+                        zoom = 0
+                        pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,0,preview_width,preview_height))
+                        button(1,7,0,9)
+                        text(1,7,5,0,1,"FOCUS",ft,7)
+                        text(1,7,3,1,1,"",fv,7)
+                        button(1,8,0,9)
+                        text(1,8,5,0,1,"Zoom",ft,7)
+                        text(1,8,3,1,1,"",fv,7)
+                        text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
+                        time.sleep(0.25)
+                        restart = 1
+                time.sleep(.25)
+                
+            elif button_row == 9:
+                # ZOOM
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'zoom':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    zoom = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                    if zoom != 5 and Pi_Cam == 3:
+                        pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,int(preview_height * .75),preview_width,preview_height))
+                elif (mousey > preview_height + (bh*3)  and mousey < preview_height + (bh*3) + int(bh/3)):
+                    zoom = int(((mousex-((button_row -8)*bw)) / bw) * (pmax+1-pmin))
+                    if zoom != 5 and Pi_Cam == 3:
+                        pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,int(preview_height * .75),preview_width,preview_height))
+                elif ((sq_dis == 0 and mousex > preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 1)) and zoom != 5:
+                    zoom +=1
+                    zoom = min(zoom,pmax)
+                elif ((sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0)) and zoom > 0:
+                    zoom -=1
+                    if zoom != 5 and Pi_Cam == 3:
+                        pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,int(preview_height * .75),preview_width,preview_height))
+                if zoom == 0:
+                    button(1,8,0,9)
+                    text(1,8,5,0,1,"Zoom",ft,7)
+                    text(1,8,3,1,1,"",fv,7)
+                    text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
+                    draw_Vbar(1,8,greyColor,'zoom',zoom)
+                else:
+                    button(1,8,1,9)
+                    text(1,8,2,0,1,"ZOOMED",ft,0)
+                    text(1,8,3,1,1,str(zoom),fv,0)
+                    text(1,3,3,1,1,str(preview_width) + "x" + str(preview_height),fv,11)
+                    draw_Vbar(1,8,dgryColor,'zoom',zoom)
+                
+                restart = 1
+                time.sleep(.2)
+
+            elif button_row == 11:
+                # TIMELAPSE DURATION
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'tduration':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    tduration = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + (bh*3)  and mousey < preview_height + (bh*3) + int(bh/3)):
+                    tduration = int(((mousex-((button_row - 8)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        tduration -=1
+                        tduration = max(tduration,pmin)
+                    else:
+                        tduration +=1
+                        tduration = min(tduration,pmax)
+                text(1,10,3,1,1,str(tduration),fv,12)
+                draw_Vbar(1,10,lyelColor,'tduration',tduration)
+                if tinterval > 0:
+                    tshots = int(tduration / tinterval)
+                    text(1,12,3,1,1,str(tshots),fv,12)
+                else:
+                    text(1,12,3,1,1," ",fv,12)
+                draw_Vbar(1,12,lyelColor,'tshots',tshots)
+                time.sleep(.25)
+
+            elif button_row == 12:
+                # TIMELAPSE INTERVAL
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'tinterval':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    tinterval = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + (bh*3)  and mousey < preview_height + (bh*3) + int(bh/3)):
+                    tinterval = int(((mousex-((button_row -8)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        tinterval -=1
+                        tinterval = max(tinterval,pmin)
+                    else:
+                        tinterval +=1
+                        tinterval = min(tinterval,pmax)
+                if Pi_Cam == 6 and mode == 0 and tinterval > 0:
+                    text(1,9,1,1,1,"T'lapse  2x2",ft,7)
+                else:
+                    text(1,9,1,1,1,"Timelapse",ft,7)
+                text(1,11,3,1,1,str(tinterval),fv,12)
+                draw_Vbar(1,11,lyelColor,'tinterval',tinterval)
+                if tinterval != 0:
+                    tduration = tinterval * tshots
+                    text(1,10,3,1,1,str(tduration),fv,12)
+                    draw_Vbar(1,10,lyelColor,'tduration',tduration)
+                if tinterval == 0:
+                    text(1,12,3,1,1," ",fv,12)
+                    if mode == 0:
+                        speed = 15
+                        shutter = shutters[speed]
+                        if shutter < 0:
+                            shutter = abs(1/shutter)
+                        sspeed = int(shutter * 1000000)
+                        if (shutter * 1000000) - int(shutter * 1000000) > 0.5:
+                            sspeed +=1
+                        if shutters[speed] < 0:
+                            text(0,2,3,1,1,"1/" + str(abs(shutters[speed])),fv,10)
+                        else:
+                            text(0,2,3,1,1,str(shutters[speed]),fv,10)
+                        draw_bar(0,2,lgrnColor,'speed',speed)
+                        restart = 1
+                else:
+                    text(1,12,3,1,1,str(tshots),fv,12)
+                time.sleep(.25)
+                
+            elif button_row == 13 and tinterval > 0:
+                # TIMELAPSE SHOTS
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'tshots':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    tshots = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + (bh*3)  and mousey < preview_height + (bh*3) + int(bh/3)):
+                    tshots = int(((mousex-((button_row -8)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        tshots -=1
+                        tshots = max(tshots,pmin)
+                    else:
+                        tshots +=1
+                        tshots = min(tshots,pmax)
+                text(1,12,3,1,1,str(tshots),fv,12)
+                draw_Vbar(1,12,lyelColor,'tshots',tshots)
+                if tduration > 0:
+                    tduration = tinterval * tshots
+                if tduration == 0:
+                    tduration = 1
+                text(1,10,3,1,1,str(tduration),fv,12)
+                draw_Vbar(1,10,lyelColor,'tduration',tduration)
+                time.sleep(.25)
+
+               
+            elif button_row == 14:
+                if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                   # SAVE CONFIG
+                   text(1,13,3,1,1,"Config",fv,7)
+                   config[0] = mode
+                   config[1] = speed
+                   config[2] = gain
+                   config[3] = int(brightness)
+                   config[4] = int(contrast)
+                   config[5] = frame
+                   config[6] = int(red)
+                   config[7] = int(blue)
+                   config[8] = ev
+                   config[9] = vlen
+                   config[10] = fps
+                   config[11] = vformat
+                   config[12] = codec
+                   config[13] = tinterval
+                   config[14] = tshots
+                   config[15] = extn
+                   config[16] = zx
+                   config[17] = zy
+                   config[18] = zoom
+                   config[19] = int(saturation)
+                   config[20] = meter
+                   config[21] = awb
+                   config[22] = sharpness
+                   config[23] = int(denoise)
+                   config[24] = quality
+                   config[25] = profile
+                   config[26] = level
+                   with open(config_file, 'w') as f:
+                       for item in config:
+                           f.write("%s\n" % item)
+                   time.sleep(1)
+                   text(1,13,2,1,1,"Config",fv,7)
+                else: 
+                   os.killpg(p.pid, signal.SIGTERM)
+                   pygame.display.quit()
+                   sys.exit()
+    # RESTART         
+    if restart > 0 and buttonx[0] == 0:
+        os.killpg(p.pid, signal.SIGTERM)
+        time.sleep(0.25)
+        text(0,0,6,2,1,"Waiting for preview ...",int(fv*1.7),1)
+        preview()
+        
+    #check for any mouse button presses
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            os.killpg(p.pid, signal.SIGTERM)
+            pygame.quit()
+        elif (event.type == MOUSEBUTTONUP):
+            mousex, mousey = event.pos
+            if mousex < preview_width and mousey < preview_height:
+                xx = mousex
+                xx = min(mousex,preview_width - 50)
+                xx = max(mousex,50)
+                xy = mousey
+                xy = min(mousey,preview_height - 50)
+                xy = max(mousey,50)
+            if (sq_dis == 0 and mousex > preview_width) or (sq_dis == 1 and mousey > preview_height):
+                if sq_dis == 0:
+                    button_column = int((mousex-preview_width)/bw) + 1
+                    button_row = int((mousey)/bh) + 1
+                    if mousex > preview_width + bw + (bw/2):
+                        button_pos = 2
+                    elif mousex > preview_width + (bw/2):
+                        button_pos = 1
+                    else:
+                        button_pos = 0
+                else:
+                    if mousey - preview_height < bh:
+                        button_column = 1
+                        button_row = int(mousex / bw) + 1
+                        if mousex > ((button_row -1) * bw) + (bw/2):
+                            button_pos = 1
+                        else:
+                            button_pos = 0
+                    elif mousey - preview_height < bh * 2:
+                        button_column = 1
+                        button_row = int(mousex / bw) + 7
+                        if mousex > ((button_row - 7) * bw) + (bw/2):
+                            button_pos = 1
+                        else:
+                            button_pos = 0
+                    elif mousey - preview_height < bh * 3:
+                        button_column = 2
+                        button_row = int(mousex / bw) + 1
+                        if mousex > ((button_row -1) * bw) + (bw/2):
+                            button_pos = 1
+                        else:
+                            button_pos = 0
+                    elif mousey - preview_height < bh * 4:
+                        button_column = 2
+                        button_row = int(mousex / bw) + 8
+                        if mousex > ((button_row - 8) * bw) + (bw/2):
+                            button_pos = 1
+                        else:
+                            button_pos = 0
+                y = button_row-1
+                
+                if button_column == 1:    
+                    if button_row == 1 :
+                        # TAKE STILL
+                        os.killpg(p.pid, signal.SIGTERM)
+                        button(0,0,1,4)
+                        text(0,0,2,0,1,"CAPTURING",ft,0)
+                        if Pi_Cam == 5 and mode == 0 and button_pos == 1:
+                            text(0,0,2,1,1,"STILL    2x2",ft,0)
+                        else:
+                            text(0,0,2,1,1,"STILL",ft,0)
+                        text(1,0,0,0,1,"CAPTURE",ft,7)
+                        text(1,0,0,1,1,"Video",ft,7)
+                        text(1,9,0,0,1,"CAPTURE",ft,7)
+                        if Pi_Cam == 5 and mode == 0 and tinterval > 0:
+                            text(1,9,0,1,1,"T'lapse  2x2",ft,7)
+                        else:
+                            text(1,9,0,1,1,"Timelapse",ft,7)
+                        text(0,0,6,2,1,"Please Wait, taking still ...",int(fv*1.7),1)
+                        now = datetime.datetime.now()
+                        timestamp = now.strftime("%y%m%d%H%M%S")
+                        if extns[extn] != 'raw':
+                            fname =  pic_dir + str(timestamp) + '.' + extns2[extn]
+                            rpistr = "libcamera-still -e " + extns[extn] + " -n -t 5000 -o " + fname
+                        else:
+                            fname =  pic_dir + str(timestamp) + '.' + extns2[extn]
+                            rpistr = "libcamera-still -r -n -t 5000 -o " + fname
+                            if preview_width == 640 and preview_height == 480 and zoom == 4:
+                                rpistr += " --rawfull"
+                        rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
+                        if extns[extn] == "jpg" and preview_width == 640 and preview_height == 480 and zoom == 4:
+                            rpistr += " -r --rawfull"
+                        if mode == 0:
+                            rpistr += " --shutter " + str(sspeed)
+                        else:
+                            rpistr += " --exposure " + str(modes[mode])
+                        if ev != 0:
+                            rpistr += " --ev " + str(ev)
+                        if sspeed > 1000000 and mode == 0:
+                            rpistr += " --gain 1 --awbgains " + str(red/10) + "," + str(blue/10) + " --immediate "
+                        else:    
+                            rpistr += " --gain " + str(gain)
+                            if awb == 0:
+                                rpistr += " --awbgains " + str(red/10) + "," + str(blue/10)
+                            else:
+                                rpistr += " --awb " + awbs[awb]
+                        rpistr += " --metering " + meters[meter]
+                        rpistr += " --saturation " + str(saturation/10)
+                        rpistr += " --sharpness " + str(sharpness/10)
+                        rpistr += " --denoise "    + denoises[denoise]
+                        if Pi_Cam >= 5 and foc_man == 0:
+                            rpistr += " --autofocus "
+                        if Pi_Cam == 3 and v3_f_mode > 0 :
+                            rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
+                        if Pi_Cam == 3:
+                            rpistr += " --width 4608 --height 2592 "
+                            if  v3_hdr == 1:
+                                rpistr += " --hdr"
+                        if Pi_Cam == 6 and mode == 0 and button_pos == 1:
+                            rpistr += " --width 4624 --height 3472 " # 16MP superpixel mode for higher light sensitivity
+                        elif Pi_Cam == 6:
+                            rpistr += " --width 9152 --height 6944"
+                        if zoom > 0 and zoom < 5:
+                            zxo = ((igw-zws[(4-zoom) + ((Pi_Cam-1)* 4)])/2)/igw
+                            zyo = ((igh-zhs[(4-zoom) + ((Pi_Cam-1)* 4)])/2)/igh
+                            rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(zws[(4-zoom) + ((Pi_Cam-1)* 4)]/igw) + "," + str(zhs[(4-zoom) + ((Pi_Cam-1)* 4)]/igh)
+                        if zoom == 5:
+                            zxo = ((igw/2)-(preview_width/2))/igw
+                            zyo = ((igh/2)-(preview_height/2))/igh
+                            rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)
+                        #print(rpistr)
+                        os.system(rpistr)
+
+                        while not os.path.exists(fname):
+                            pass
+                        if extns2[extn] == 'jpg' or extns2[extn] == 'bmp' or extns2[extn] == 'png':
+                            image = pygame.image.load(fname)
+                            if (Pi_Cam != 3) or (Pi_Cam == 3 and zoom == 5):
+                                catSurfacesmall = pygame.transform.scale(image, (preview_width,preview_height))
+                            else:
+                                catSurfacesmall = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
+                            windowSurfaceObj.blit(catSurfacesmall, (0, 0))
+                        text(0,0,6,2,1,fname,int(fv*1.5),1)
+                        pygame.display.update()
+                        time.sleep(2)
+                        button(0,0,0,4)
+                        text(0,0,1,0,1,"CAPTURE",ft,7)
+                        text(1,0,1,0,1,"CAPTURE",ft,7)
+                        text(1,0,1,1,1,"Video",ft,7)
+                        if Pi_Cam == 6 and mode == 0:
+                            text(0,0,1,1,1,"STILL    2x2",ft,7)
+                        else:
+                            text(0,0,1,1,1,"Still ",ft,7)
+                        text(1,9,1,0,1,"CAPTURE",ft,7)
+                        if Pi_Cam == 6 and mode == 0 and tinterval > 0:
+                            text(1,9,1,1,1,"T'lapse  2x2",ft,7)
+                        else:
+                            text(1,9,1,1,1,"Timelapse",ft,7)
+                        restart = 2
+                        
+                if button_column == 2:                       
+                    if button_row == 1:
+                        # TAKE VIDEO
+                        os.killpg(p.pid, signal.SIGTERM)
+                        button(1,0,1,3)
+                        text(1,0,3,0,1,"STOP ",ft,0)
+                        text(1,0,3,1,1,"Record",ft,0)
+                        text(0,0,0,0,1,"CAPTURE",ft,7)
+                        if Pi_Cam == 6 and mode == 0 and tinterval > 0:
+                            text(0,0,0,1,1,"STILL    2x2",ft,7)
+                        else:
+                            text(0,0,0,1,1,"Still ",ft,7)
+                        text(1,9,0,0,1,"CAPTURE",ft,7)
+                        if Pi_Cam == 6 and mode == 0 and tinterval > 0:
+                            text(1,9,0,1,1,"T'lapse  2x2",ft,7)
+                        else:
+                            text(1,9,0,1,1,"Timelapse",ft,7)
+                        text(0,0,6,2,1,"Please Wait, taking video ...",int(fv*1.7),1)
+                        now = datetime.datetime.now()
+                        timestamp = now.strftime("%y%m%d%H%M%S")
+                        vname =  vid_dir + str(timestamp) + "." + codecs2[codec]
+                        if codecs2[codec] != 'raw':
+                            rpistr = "libcamera-vid -t " + str(vlen * 1000) + " -o " + vname + " --framerate " + str(fps)
+                            if codecs[codec] != 'h264':
+                                rpistr += " --codec " + codecs[codec]
+                            else:
+                                prof = h264profiles[profile].split(" ")
+                                rpistr += " --profile " + str(prof[0]) + " --level " + str(prof[1])
+                        else:
+                            rpistr = "libcamera-raw -t " + str(vlen * 1000) + " -o " + vname + " --framerate " + str(fps)
+                        if vpreview == 0:
+                            rpistr += " -n "
+                        rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
+                        if zoom > 0:
+                            rpistr += " --width " + str(preview_width) + " --height " + str(preview_height)
+                        elif Pi_Cam == 4 and vwidth == 2028:
+                            rpistr += " --mode 2028:1520:12"
+                        elif Pi_Cam == 3 and vwidth == 2304 and codec == 0:
+                            rpistr += " --mode 2304:1296:10 --width 2304 --height 1296"
+                        elif Pi_Cam == 3 and vwidth == 2028 and codec == 0:
+                            rpistr += " --mode 2028:1520:10 --width 2028 --height 1520"
+                        else:
+                            rpistr += " --width " + str(vwidth) + " --height " + str(vheight)
+                        if mode == 0:
+                            rpistr += " --shutter " + str(sspeed)
+                        else:
+                            rpistr += " --exposure " + modes[mode]
+                        rpistr += " --gain " + str(gain)
+                        if ev != 0:
+                            rpistr += " --ev " + str(ev)
+                        if awb == 0:
+                            rpistr += " --awbgains " + str(red/10) + "," + str(blue/10)
+                        else:
+                            rpistr += " --awb " + awbs[awb]
+                        rpistr += " --metering " + meters[meter]
+                        rpistr += " --saturation " + str(saturation/10)
+                        rpistr += " --sharpness " + str(sharpness/10)
+                        rpistr += " --denoise "    + denoises[denoise]
+                        if Pi_Cam >= 5 and foc_man == 0:
+                            rpistr += " --autofocus "
+                        if Pi_Cam == 3 and v3_f_mode > 0 :
+                            rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
+                        if Pi_Cam == 3 and v3_hdr == 1:
+                            rpistr += " --hdr"
+                        rpistr += " -p 0,0," + str(preview_width) + "," + str(preview_height)
+                        if zoom > 0 and zoom < 5:
+                            zxo = ((1920-zwidths[4 - zoom])/2)/1920
+                            zyo = ((1440-zheights[4 - zoom])/2)/1440
+                            rpistr += " --mode 1920:1440:10  --roi " + str(zxo) + "," + str(zyo) + "," + str(zwidths[4 - zoom]/1920) + "," + str(zheights[4 - zoom]/1440)
+                        if zoom == 5:
+                            zxo = ((igw/2)-(preview_width/2))/igw
+                            zyo = ((igh/2)-(preview_height/2))/igh
+                            rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)                            
+                        print (rpistr)
+                        p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
+                        start_video = time.monotonic()
+                        stop = 0
+                        while time.monotonic() - start_video < vlen and stop == 0:
+                            for event in pygame.event.get():
+                                if (event.type == MOUSEBUTTONUP):
+                                    mousex, mousey = event.pos
+                                    # stop video recording
+                                    if mousex > preview_width:
+                                        button_column = int((mousex-preview_width)/bw) + 1
+                                        button_row = int((mousey)/bh) + 1
+                                        if mousex > preview_width + bw + (bw/2):
+                                            button_pos = 1
+                                        else:
+                                            button_pos = 0
+                                    else:
+                                        if mousey - preview_height < bh:
+                                            button_column = 1
+                                            button_row = int(mousex / bw) + 1
+                                        elif mousey - preview_height < bh * 2:
+                                            button_column = 1
+                                            button_row = int(mousex / bw) + 7
+                                        elif mousey - preview_height < bh * 3:
+                                            button_column = 2
+                                            button_row = int(mousex / bw) + 1
+                                        elif mousey - preview_height < bh * 4:
+                                            button_column = 2
+                                            button_row = int(mousex / bw) + 7
+                                    if button_column == 2 and button_row == 1:
+                                       os.killpg(p.pid, signal.SIGTERM)
+                                       stop = 1
+                        text(0,0,6,2,1,vname,int(fv*1.5),1)
+                        time.sleep(1)
+                        button(1,0,0,3)
+                        text(0,0,1,0,1,"CAPTURE",ft,7)
+                        if Pi_Cam == 5 and mode == 0:
+                            text(0,0,1,1,1,"STILL    2x2",ft,7)
+                        else:
+                            text(0,0,1,1,1,"Still ",ft,7)
+                        text(1,0,1,0,1,"CAPTURE",ft,7)
+                        text(1,0,1,1,1,"Video",ft,7)
+                        text(1,9,1,0,1,"CAPTURE",ft,7)
+                        if Pi_Cam == 5 and mode == 0 and tinterval > 0:
+                            text(1,9,1,1,1,"T'lapse  2x2",ft,7)
+                        else:
+                            text(1,9,1,1,1,"Timelapse",ft,7)
+                        restart = 2
+                   
+                    elif button_row == 10:
+                        # TAKE TIMELAPSE
+                        os.killpg(p.pid, signal.SIGTERM)
+                        button(1,9,1,2)
+                        text(1,9,3,0,1,"STOP",ft,0)
+                        text(1,9,3,1,1,"Timelapse",ft,0)
+                        text(0,0,0,0,1,"CAPTURE",ft,7)
+                        text(1,0,0,0,1,"CAPTURE",ft,7)
+                        text(1,0,0,1,1,"Video",ft,7)
+                        if Pi_Cam == 5 and mode == 0:
+                            text(0,0,0,1,1,"STILL    2x2",ft,7)
+                        else:
+                            text(0,0,0,1,1,"Still ",ft,7)
+                        tcount = 0
+                        if tinterval > 0:
+                            text(1,9,3,0,1,"STOP",ft,0)
+                            text(1,9,3,1,1,"Timelapse",ft,0)
+                            text(0,0,6,2,1,"Please Wait, taking Timelapse ...",int(fv*1.7),1)
+                            now = datetime.datetime.now()
+                            timestamp = now.strftime("%y%m%d%H%M%S")
+                            count = 0
+                            fname =  pic_dir + str(timestamp) + '_%04d.' + extns2[extn]
+                            if extns[extn] != 'raw':
+                                rpistr = "libcamera-still -e " + extns[extn] + " -s -n -t 0 -o " + fname
+                            else:
+                                rpistr = "libcamera-still -r -s -n -t 0 -o " + fname 
+                                if preview_width == 640 and preview_height == 480 and zoom >= 4:
+                                    rpistr += " --rawfull"
+                            rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
+                            if extns[extn] == "jpg" and preview_width == 640 and preview_height == 480 and zoom >= 4:
+                                rpistr += " -r --rawfull"
+                            if mode == 0:
+                                rpistr += " --shutter " + str(sspeed)
+                            else:
+                                rpistr += " --exposure " + modes[mode]
+                            if ev != 0:
+                                rpistr += " --ev " + str(ev)
+                            if sspeed > 5000000 and mode == 0 and Pi_Cam < 5:
+                                rpistr += " --gain 1 --awbgain 1,1 --immediate"
+                            else:
+                                rpistr += " --gain " + str(gain)
+                                if awb == 0:
+                                    rpistr += " --awbgains " + str(red/10) + "," + str(blue/10)
+                                else:
+                                    rpistr += " --awb " + awbs[awb]
+                            rpistr += " --metering " + meters[meter]
+                            rpistr += " --saturation " + str(saturation/10)
+                            rpistr += " --sharpness " + str(sharpness/10)
+                            rpistr += " --denoise "    + denoises[denoise]
+                            if Pi_Cam >= 5 and foc_man == 0 and tinterval > 5:
+                                rpistr += " --autofocus "
+                            if Pi_Cam == 3 and v3_f_mode > 0 :
+                                rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
+                            if Pi_Cam == 3 and v3_hdr == 1:
+                                rpistr += " --hdr"
+                            if Pi_Cam == 6 and mode == 0 and button_pos == 2:
+                                rpistr += " --width 4624 --height 3472 " # 16MP superpixel mode for higher light sensitivity
+                            elif Pi_Cam == 6:
+                                rpistr += " --width 9152 --height 6944"
+                            if zoom > 0 and zoom < 5:
+                                zxo = ((igw-zws[(4-zoom) + ((Pi_Cam-1)* 4)])/2)/igw
+                                zyo = ((igh-zhs[(4-zoom) + ((Pi_Cam-1)* 4)])/2)/igh
+                                rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(zws[(4-zoom) + ((Pi_Cam-1)* 4)]/igw) + "," + str(zhs[(4-zoom) + ((Pi_Cam-1)* 4)]/igh)
+                            if zoom == 5:
+                                zxo = ((igw/2)-(preview_width/2))/igw
+                                zyo = ((igh/2)-(preview_height/2))/igh
+                                rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)
+                            p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
+                            #print (rpistr)
+                            start_timelapse = time.monotonic()
+                            start2 = time.monotonic()
+                            stop = 0
+                            pics3 = []
+                            count = 0
+                            old_count = 0
+                            while count < tshots and stop == 0:
+                                if time.monotonic() - start2 > tinterval:
+                                    os.system('pkill -SIGUSR1 libcamera-still')
+                                    start2 = time.monotonic()
+                                    text(0,0,6,2,1,"Please Wait, taking Timelapse ..."  + " " + str(count+1),int(fv*1.7),1)
+                                    show = 0
+                                    while count == old_count:
+                                        pics3 = glob.glob(pic_dir + "*.*")
+                                        counts = []
+                                        for xu in range(0,len(pics3)):
+                                            ww = pics3[xu].split("/")
+                                            if ww[4][0:12] == timestamp:
+                                                counts.append(pics3[xu])
+                                        count = len(counts)
+                                        counts.sort()
+                                        if (extns2[extn] == 'jpg' or extns2[extn] == 'bmp' or extns2[extn] == 'png') and count > 0 and show == 0:
+                                            image = pygame.image.load(counts[count-1])
+                                            if (Pi_Cam != 3) or (Pi_Cam == 3 and zoom == 5):
+                                                catSurfacesmall = pygame.transform.scale(image, (preview_width,preview_height))
+                                            else:
+                                                catSurfacesmall = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
+                                            windowSurfaceObj.blit(catSurfacesmall, (0, 0))
+                                            text(0,0,6,2,1,counts[count-1],int(fv*1.5),1)
+                                            pygame.display.update()
+                                            show == 1
+                                        for event in pygame.event.get():
+                                            if (event.type == MOUSEBUTTONUP):
+                                                mousex, mousey = event.pos
+                                                # stop timelapse
+                                                if mousex > preview_width:
+                                                    button_column = int((mousex-preview_width)/bw) + 1
+                                                    button_row = int((mousey)/bh) + 1
+                                                else:
+                                                    if mousey - preview_height < bh:
+                                                        button_column = 1
+                                                        button_row = int(mousex / bw) + 1
+                                                    elif mousey - preview_height < bh * 2:
+                                                        button_column = 1
+                                                        button_row = int(mousex / bw) + 7
+                                                    elif mousey - preview_height < bh * 3:
+                                                        button_column = 2
+                                                        button_row = int(mousex / bw) + 1
+                                                    elif mousey - preview_height < bh * 4:
+                                                        button_column = 2
+                                                        button_row = int(mousex / bw) + 8
+                                                if button_column == 2 and button_row == 10:
+                                                    os.killpg(p.pid, signal.SIGTERM)
+                                                    stop = 1
+                                                    count = -1
+                                    old_count = count
+
+                        else:
+                            if tduration == 0:
+                                tduration = 1
+                            text(0,0,6,2,1,"Please Wait, taking Timelapse ...",int(fv*1.7),1)
+                            now = datetime.datetime.now()
+                            timestamp = now.strftime("%y%m%d%H%M%S")
+                            fname =  pic_dir + str(timestamp) + '_%04d.' + extns2[extn]
+                            if codecs2[codec] != 'raw':
+                                rpistr = "libcamera-vid -n --codec mjpeg -t " + str(tduration*1000) + " --segment 1 -o " + fname
+                            else:
+                                fname =  pic_dir + str(timestamp) + '_%04d.' + codecs2[codec]
+                                rpistr = "libcamera-raw -n -t " + str(tduration*1000) + " --segment 1 -o " + fname
+                            if zoom > 0:
+                                rpistr += " --width " + str(preview_width) + " --height " + str(preview_height)
+                            else:
+                                rpistr += " --width " + str(vwidth) + " --height " + str(vheight)
+                            rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
+                            if mode == 0:
+                                rpistr += " --shutter " + str(sspeed) + " --framerate " + str(1000000/sspeed)
+                            else:
+                                rpistr += " --exposure " + str(modes[mode]) + " --framerate " + str(fps)
+                            if ev != 0:
+                                rpistr += " --ev " + str(ev)
+                            if sspeed > 5000000 and mode == 0 and Pi_Cam < 4:
+                                rpistr += " --gain 1 --awbgain 1,1 --immediate"
+                            else:
+                                rpistr += " --gain " + str(gain)
+                                if awb == 0:
+                                    rpistr += " --awbgains " + str(red/10) + "," + str(blue/10)
+                                else:
+                                    rpistr += " --awb " + awbs[awb]
+                            rpistr += " --metering "   + meters[meter]
+                            rpistr += " --saturation " + str(saturation/10)
+                            rpistr += " --sharpness "  + str(sharpness/10)
+                            rpistr += " --denoise "    + denoises[denoise]
+                            if Pi_Cam >= 5 and foc_man == 0:
+                                rpistr += " --autofocus "
+                            if Pi_Cam == 3 and v3_f_mode > 0 :
+                                rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
+                            if Pi_Cam == 3 and v3_hdr == 1:
+                                rpistr += " --hdr"
+                            if zoom > 0 and zoom < 5 :
+                                zxo = ((igw-zws[(4-zoom) + ((Pi_Cam-1)* 4)])/2)/igw
+                                zyo = ((igh-zhs[(4-zoom) + ((Pi_Cam-1)* 4)])/2)/igh
+                                rpistr += " --mode 1920:1440:10 --roi " + str(zxo) + "," + str(zyo) + "," + str(zws[(4-zoom) + ((Pi_Cam-1)* 4)]/igw) + "," + str(zhs[(4-zoom) + ((Pi_Cam-1)* 4)]/igh)
+                            if zoom == 5:
+                                zxo = ((igw/2)-(preview_width/2))/igw
+                                zyo = ((igh/2)-(preview_height/2))/igh
+                                rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)
+                            print (rpistr)
+                            p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
+                            start_timelapse = time.monotonic()
+                            stop = 0
+                            while time.monotonic() - start_timelapse < tduration+1 and stop == 0:
+                                for event in pygame.event.get():
+                                    if (event.type == MOUSEBUTTONUP):
+                                        mousex, mousey = event.pos
+                                        # stop timelapse
+                                        if mousex > preview_width:
+                                            button_column = int((mousex-preview_width)/bw) + 1
+                                            button_row = int((mousey)/bh) + 1
+                                        else:
+                                            if mousey - preview_height < bh:
+                                                button_column = 1
+                                                button_row = int(mousex / bw) + 1
+                                            elif mousey - preview_height < bh * 2:
+                                                button_column = 1
+                                                button_row = int(mousex / bw) + 7
+                                            elif mousey - preview_height < bh * 3:
+                                                button_column = 2
+                                                button_row = int(mousex / bw) + 1
+                                            elif mousey - preview_height < bh * 4:
+                                                button_column = 2
+                                                button_row = int(mousex / bw) + 7
+                                        if button_column == 2 and button_row == 9:
+                                            os.killpg(p.pid, signal.SIGTERM)
+                                            stop = 1
+                        button(1,9,0,2)
+                        text(0,0,1,0,1,"CAPTURE",ft,7)
+                        text(1,0,1,0,1,"CAPTURE",ft,7)
+                        text(1,0,1,1,1,"Video",ft,7)
+                        if Pi_Cam == 6 and mode == 0:
+                            text(0,0,1,1,1,"STILL    2x2",ft,7)
+                        else:
+                            text(0,0,1,1,1,"Still ",ft,7)
+                        text(1,9,1,0,1,"CAPTURE",ft,7)
+                        if Pi_Cam == 6 and mode == 0 and tinterval > 0:
+                            text(1,9,1,1,1,"T'lapse  2x2",ft,7)
+                        else:
+                            text(1,9,1,1,1,"Timelapse",ft,7)
+                        restart = 2
+        # RESTART
+        if restart > 0:
+            poll = p.poll()
+            if poll == None:
+                os.killpg(p.pid, signal.SIGTERM)
+            text(0,0,6,2,1,"Waiting for preview ...",int(fv*1.7),1)
+            preview()
+
+
+
+
+
+
+                      
+
