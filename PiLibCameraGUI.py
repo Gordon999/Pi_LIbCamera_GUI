@@ -2130,7 +2130,7 @@ while True:
                             zxo = ((igw/2)-(preview_width/2))/igw
                             zyo = ((igh/2)-(preview_height/2))/igh
                             rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)                            
-                        print (rpistr)
+                        #print (rpistr)
                         p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
                         start_video = time.monotonic()
                         stop = 0
@@ -2355,7 +2355,7 @@ while True:
                                 zxo = ((igw/2)-(preview_width/2))/igw
                                 zyo = ((igh/2)-(preview_height/2))/igh
                                 rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)
-                            print (rpistr)
+                            #print (rpistr)
                             p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
                             start_timelapse = time.monotonic()
                             stop = 0
