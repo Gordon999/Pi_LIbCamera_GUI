@@ -60,7 +60,7 @@ meter       = 0       # metering mode ( 0 = centre)
 awb         = 1       # auto white balance mode, off, auto etc ( 1 = auto)
 sharpness   = 15      # set sharpness level
 denoise     = 1       # set denoise level
-quality     = 75      # set quality level
+quality     = 100     # set quality level
 profile     = 0       # set h264 profile
 level       = 0       # set h264 level
 foc_man     = 0
@@ -2006,6 +2006,7 @@ while True:
                         rpistr += " --saturation " + str(saturation/10)
                         rpistr += " --sharpness " + str(sharpness/10)
                         rpistr += " --denoise "    + denoises[denoise]
+                        rpistr += " --quality " + str(quality)
                         if Pi_Cam >= 5 and foc_man == 0:
                             rpistr += " --autofocus "
                         if Pi_Cam == 3 and v3_f_mode > 0 :
@@ -2227,6 +2228,7 @@ while True:
                             rpistr += " --saturation " + str(saturation/10)
                             rpistr += " --sharpness " + str(sharpness/10)
                             rpistr += " --denoise "    + denoises[denoise]
+                            rpistr += " --quality " + str(quality)
                             if Pi_Cam >= 5 and foc_man == 0 and tinterval > 5:
                                 rpistr += " --autofocus "
                             if Pi_Cam == 3 and v3_f_mode > 0 :
