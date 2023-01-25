@@ -20,7 +20,7 @@ Shows a reduced preview but saves stills at camera full resolution, and videos a
 
 Can also save timelapses, set Interval to 0 for fast capture (uses libcamera-vid, or libcamera-raw if Vcodec set to raw). If you want to capture high resolution images as fast as possible using Timelapse set Interval to 0, set Duration to required seconds, set V_FPS to max, set V_Coder to mjpeg or raw , set V_Format to maximum value, click on CAPTURE Timelapse to start. The images will be in /home/.username./Pictures. If using Arducam 16MP or 64MP AF camera you will need more memory allocated to achieve full resolution if using Timelapse. In /boot/config.txt set dtoverlay=vc4-kms-v3d,cma-512 and then reboot. Note for fastest timelapse it uses libcamera-vid so not the highest quality images.
 
-To convert RAWs from a Pi v1,v2,v3 or HQ camera try https://github.com/Gordon999/PiRAW2JPG
+To convert RAWs to TIF from a Pi v1,v2,v3 or HQ camera try https://github.com/Gordon999/PiRAW2TIF
 
 With a Pi HQ Camera will allow exposures upto 239 seconds. (Note Pi v1 limited to approx 1.1 seconds due to libcamera), Arducam 16 and 64mp cameras upto 200 and 435 seconds.
 
