@@ -2118,7 +2118,7 @@ while True:
                                     again = check[1][:-1]
                                 if check[0] == "ExposureTime":
                                     etime = check[1][:-1]
-                          text(0,25,6,2,1,"Ana Gain: " + str(again) + " Dig Gain: " + str(dgain) + " Exp Time: " + str(etime) +"mS",int(fv*1.5),1)
+                          text(0,25,6,2,1,"Ana Gain: " + str(again) + " Dig Gain: " + str(dgain) + " Exp Time: " + str(etime) +"uS",int(fv*1.5),1)
                         text(0,0,6,2,1,fname,int(fv*1.5),1)
                         pygame.display.update()
                         time.sleep(2)
