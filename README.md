@@ -10,6 +10,8 @@ With Pi V3 or Arducam 16/64MP Click on FOCUS button to focus. This will show FOC
 
 HDR option for Pi v3 camera
 
+Gain shows analog and digital gain. Green shows analog gain, when increased beyond a level will show yellow when applying digital gain.
+
 2x2 binning option for 64MP camera, Click on right hand side of the Capture Still or Capture Timelapse buttons. 
 
 For use with Hyperpixel square display set preview_width  = 720, preview_height = 540, sq_dis = 1 
