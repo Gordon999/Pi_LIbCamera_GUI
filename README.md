@@ -12,6 +12,7 @@ HDR option for Pi v3 camera
 
 Gain shows analog and digital gain. Green shows analog gain, when increased beyond a level will show yellow when applying digital gain.
 eg 153 : 64/2.4 means gain set to 153, analog gain is 64, digital gain is 2.4
+When a still is captured will show Analogue Gain, Digital Gain and Exposure time.
 
 2x2 binning option for 64MP camera, Click on right hand side of the Capture Still or Capture Timelapse buttons. 
 
