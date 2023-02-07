@@ -514,8 +514,8 @@ def preview():
     rpistr += " --sharpness "  + str(sharpness/10)
     rpistr += " --denoise "    + denoises[denoise]
     rpistr += " --quality " + str(quality)
-    #if Pi_Cam >= 5 and foc_man == 0:
-    #    rpistr += " --autofocus "
+    if Pi_Cam >= 5 and foc_man == 0:
+        rpistr += " --autofocus "
     if Pi_Cam == 3 and v3_f_mode > 0 :
         rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
     if Pi_Cam == 3 and v3_hdr == 1:
