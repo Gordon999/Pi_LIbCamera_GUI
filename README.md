@@ -11,7 +11,7 @@ With Pi V3 or Arducam 16/64MP Click on FOCUS button to focus. This will show FOC
 HDR option for Pi v3 camera
 
 Gain shows analog and digital gain. Green shows analog gain, when increased beyond a level will show yellow when applying digital gain.
-eg 153 : 64 / 2 means gain set to 153, analog gain is 64, digital gain is 2 (note digital is only an integer)
+eg 153 : 64 / 2 means gain set to 153, analog gain is 64, digital gain is 2.4
 
 2x2 binning option for 64MP camera, Click on right hand side of the Capture Still or Capture Timelapse buttons. 
 
