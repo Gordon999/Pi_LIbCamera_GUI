@@ -6,7 +6,7 @@ At your own risk !!. Ensure you have any required software backed up.
 
 Script to allow control of a Pi Camera. Will work with all models, v1, v2, v3 & HQ. Also Arducam 16MP and 64MP Autofocus. 
 
-With Pi V3 or Arducam 16/64MP Click on FOCUS button to focus. This will show FOCUS MAN, which gives Manual Focusing, then click on 'slider' or the middle of the button, left or right for fine adjustment, to adjust Manual Focus. lt will show a value for focus in the top left corner, adjust for a maximum. Click on lower part of the button to go back to auto focus. 
+With Pi V3 or Arducam 16/64MP Click on FOCUS button to focus. This will show FOCUS MAN, which gives Manual Focusing, then click on 'slider' or the middle of the button, left or right for fine adjustment, to adjust Manual Focus. lt will show a value for focus in the top left corner, adjust for a maximum. You can move the manual focus cursor by clicking on the image. Click on lower part of the button to go back to auto focus. 
 
 HDR option for Pi v3 camera
 
