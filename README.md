@@ -67,7 +67,7 @@ python3 ~/PiLibCameraGUI.py
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/Gordon999/Pi_LIbCamera_GUI/main/install.sh)"
 ```
 
-## Spot Focusiing on Pi v3 camera
+## Spot Focussing on Pi v3 camera
 
 ![spotfocus](spotfocus.jpg)
 
