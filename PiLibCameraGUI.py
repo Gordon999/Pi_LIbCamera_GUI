@@ -27,7 +27,7 @@ import signal
 import cv2
 import glob
 
-# version v4.20
+# version v4.21
 
 # set displayed preview image size (must be less than screen size to allow for the menu!!)
 # recommended 640x480, 720x540 (FOR SQUARE HYPERPIXEL DISPLAY), 800x600, 1280x960
@@ -2096,7 +2096,7 @@ while True:
                         if Pi_Cam >= 5 and foc_man == 0:
                             rpistr += " --autofocus "
                         if Pi_Cam == 3 and v3_f_mode > 0 :
-                            rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
+                            rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode] + " --autofocus-on-capture"
                         elif Pi_Cam == 3 and zoom == 0:
                             rpistr += " --autofocus-window " + str(fxx) + "," + str(fxy) + "," + str(fxz) + "," + str(fxz)
                         if Pi_Cam == 3:
@@ -2346,7 +2346,7 @@ while True:
                             if Pi_Cam >= 5 and foc_man == 0 and tinterval > 5:
                                 rpistr += " --autofocus "
                             if Pi_Cam == 3 and v3_f_mode > 0 :
-                                rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
+                                rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode] + " --autofocus-on-capture"
                             elif Pi_Cam == 3 and zoom == 0:
                                 rpistr += " --autofocus-window " + str(fxx) + "," + str(fxy) + "," + str(fxz) + "," + str(fxz)
                             if Pi_Cam == 3 and v3_hdr == 1:
