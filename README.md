@@ -15,7 +15,7 @@ With Pi V3 or Arducam 16/64MP Click on FOCUS button to focus. This will show FOC
 
 Spot focussing (focus point) in Auto Focus - ONLY with Pi v3 camera - with Zoom not in use and Focussing not in manual click on the point in the preview image you want the camera to focus on (see image below). A red box will appear to show where it's focussing. To return to normal either click below the preview image or switch to FOCUS MAN and back.
 
-If not using Manual or spot focus stills will use autofocus-at-capture
+If not using a v3 camera in Manual or spot focus stills will use autofocus-at-capture
 
 HDR option for Pi v3 camera
 
