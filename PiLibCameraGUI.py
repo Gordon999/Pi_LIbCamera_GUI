@@ -648,10 +648,10 @@ if Pi_Cam == 6 and mode == 0 and tinterval > 0:
 else:
     text(1,9,1,1,1,"Timelapse",ft,7)
 td = timedelta(seconds=tduration)
-text(1,10,5,0,1,"Duration S",ft,12)
+text(1,10,5,0,1,"Duration",ft,12)
 text(1,10,3,1,1,str(td),fv,12)
 td = timedelta(seconds=tinterval)
-text(1,11,5,0,1,"Interval S",ft,12)
+text(1,11,5,0,1,"Interval",ft,12)
 text(1,11,3,1,1,str(td),fv,12)
 text(1,12,5,0,1,"No. of Shots",ft,12)
 if tinterval > 0:
