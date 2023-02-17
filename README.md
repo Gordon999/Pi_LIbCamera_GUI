@@ -27,7 +27,7 @@ When a still is captured will show Analogue Gain, Digital Gain and Exposure time
 
 For use with Hyperpixel square display set preview_width  = 720, preview_height = 540, sq_dis = 1 
 
-HQ imx477_scientific.json file needs top be in /usr/share/libcamera/ipa/raspberrypi/imx477_scientific.json, see https://forums.raspberrypi.com/viewtopic.php?t=343449#p2075379
+HQ imx477_scientific.json file needs to be in /usr/share/libcamera/ipa/raspberrypi/imx477_scientific.json, see https://forums.raspberrypi.com/viewtopic.php?t=343449#p2075379
 
 Pi4B recommended.
 
