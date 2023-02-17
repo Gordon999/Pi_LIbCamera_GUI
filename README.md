@@ -27,6 +27,8 @@ When a still is captured will show Analogue Gain, Digital Gain and Exposure time
 
 For use with Hyperpixel square display set preview_width  = 720, preview_height = 540, sq_dis = 1 
 
+If you want a fullscreen display set fullscreen = 1 in the script. if using a full HD screen (1920×1080) then set preview-width to 1440 and preview-height to 1080, fullscreen = 1
+
 HQ imx477_scientific.json file needs to be in /usr/share/libcamera/ipa/raspberrypi/imx477_scientific.json, see https://forums.raspberrypi.com/viewtopic.php?t=343449#p2068315
 
 Pi4B recommended.
