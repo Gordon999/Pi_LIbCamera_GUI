@@ -28,7 +28,7 @@ import cv2
 import glob
 from datetime import timedelta
 
-# version v4.29
+# version v4.29a
 
 # set displayed preview image size (must be less than screen size to allow for the menu!!)
 # recommended 640x480 (Pi 7" screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY), 800x600, 1280x960, 1440x1080
@@ -77,6 +77,7 @@ v3_focus    = 480
 v3_hdr      = 0
 vpreview    = 1
 scientific  = 0
+scientif    = 0
 
 # NOTE if you change any of the above defaults you need to delete the con_file and restart.
 
