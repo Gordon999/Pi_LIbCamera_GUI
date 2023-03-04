@@ -39,7 +39,7 @@ Can also save timelapses, set Interval to 0 for fast capture (uses libcamera-vid
 
 To convert RAWs to TIF from a Pi v1,v2,v3 or HQ camera try https://github.com/Gordon999/PiRAW2TIF
 
-With a Pi HQ Camera will allow exposures upto 239 seconds. (Note Pi v1 limited to approx 1.1 seconds due to libcamera), Arducam 16 and 64mp cameras upto 200 and 435 seconds.
+With a Pi HQ Camera will allow exposures upto 239 seconds. (Note Pi v1 limited to approx 1.1 seconds, and v3 to approx 1.7 seconds due to libcamera), Arducam 16 and 64mp cameras upto 200 and 435 seconds.
 
 Click mouse on the left of a button to decrease, right to increase or use the appropriate slider
 
