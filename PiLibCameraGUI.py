@@ -2670,8 +2670,9 @@ while True:
                                             count = tshots
 
 
-                        elif tduration == 0:
-                            tduration = 1
+                        elif tinterval == 0:
+                            if tduration == 0:
+                                tduration = 1
                             text(0,0,6,2,1,"Please Wait, taking Timelapse ...",int(fv*1.7),1)
                             now = datetime.datetime.now()
                             timestamp = now.strftime("%y%m%d%H%M%S")
