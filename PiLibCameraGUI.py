@@ -127,7 +127,7 @@ fv = int(preview_width/52)
 
 # data
 cameras      = ['No','Pi v1','Pi v2','Pi v3','Pi HQ','Arducam 16MP','Arducam 64MP']
-modes        = ['manual','normal','sport','long']
+modes        = ['manual','normal','sport']
 extns        = ['jpg','png','bmp','rgb','yuv420','raw']
 extns2       = ['jpg','png','bmp','data','data','dng']
 vwidths      = [640,720,800,1280,1280,1296,1536,1640,1920,2028,2304,2592,3280,3840,4032,4056,4608,4656,9152]
