@@ -101,7 +101,7 @@ max_v3      = 112
 max_hq      = 239
 max_16mp    = 200
 max_64mp    = 435
-max_gs      = 112
+max_gs      = 15
 
 # inital parameters
 zx          = int(preview_width/2)
