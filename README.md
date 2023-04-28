@@ -23,6 +23,8 @@ Gain shows analog and digital gain. Green shows analog gain, when increased beyo
 eg 153 : 64/2.4 means gain set to 153, analog gain is 64, digital gain is 2.4
 When a still is captured will show Analogue Gain, Digital Gain and Exposure time.
 
+When using Zoom it will show a focus value, RGB levels and a histogram showing RGB and L, all based on the area shown, the area can be moved buu clicking on the image.
+
 2x2 binning option for 64MP camera, Click on right hand side of the Capture Still or Capture Timelapse buttons. 
 
 For use with Hyperpixel square display set preview_width  = 720, preview_height = 540, sq_dis = 1 
