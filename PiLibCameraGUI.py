@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.38
+# version v4.39
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -414,7 +414,7 @@ def text(col,row,fColor,top,upd,msg,fsize,bkgnd_Color):
         pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+1,by+int(bh/1.5),int(bw/2),int(bh/3)-1))
         msgRectobj.topleft = (bx+5,  by + int(bh/1.5)-1)
     elif top == 1:
-        pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+20,by+int(bh/1.5),int(bw-21),int(bh/3)-1))
+        pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+20,by+int(bh/1.5)-1,int(bw-21),int(bh/3)-1))
         msgRectobj.topleft = (bx + 20, by + int(bh/1.5)-int(preview_width/640)-1) 
     elif top == 2:
         if bkgnd_Color == 1:
@@ -791,8 +791,6 @@ while True:
         if zoom > 0 or foc_man == 1:
             image2 = pygame.surfarray.pixels3d(image)
             crop2 = image2[xx-50:xx+50,xy-50:xy+50]
-            #crop3 = pygame.surfarray.make_surface(crop2)
-            #windowSurfaceObj.blit(crop3, (100,200))
             if (zoom > 0 and foc_man != 1) or (zoom > 0 and foc_man == 1):
                 red1 = crop2[:,:,0]
                 green1 = crop2[:,:,1]
@@ -800,28 +798,86 @@ while True:
                 text(20,1,3,2,0,"R: " + str(int(np.sum(red1)/10000))+" G: " +str(int(np.sum(green1)/10000))+" B: "+str(int(np.sum(blue1)/10000)),fv* 2,0)
             gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
             gray2 = gray.reshape(10000,1)
+            red2 = red1.reshape(10000,1)
+            green2 = green1.reshape(10000,1)
+            blue2 = blue1.reshape(10000,1)
             lume = [0] * 256
+            rede = [0] * 256
+            greene = [0] * 256
+            bluee = [0] * 256
             for q in range(0,len(gray2)):
                 lume[int(gray2[q])] +=1
             for t in range(0,256):
                 if lume[t] > 0:
-                    lume[t] = int(50*math.log10(lume[t]) - 49)
-            output = [0] * 25600
+                    lume[t] = int(25*math.log10(lume[t]))
+            for q in range(0,len(red2)):
+                rede[int(red2[q])] +=1
+            for t in range(0,256):
+                if rede[t] > 0:
+                    rede[t] = int(25*math.log10(rede[t]))
+            for q in range(0,len(green2)):
+                greene[int(green2[q])] +=1
+            for t in range(0,256):
+                if greene[t] > 0:
+                    greene[t] = int(25*math.log10(greene[t]))
+            for q in range(0,len(blue2)):
+                bluee[int(blue2[q])] +=1
+            for t in range(0,256):
+                if bluee[t] > 0:
+                    bluee[t] = int(25*math.log10(bluee[t]))
+            output = np.zeros((256,100,3))
+            old_lume = 0
+            old_rede = 0
+            old_greene = 0
+            old_bluee = 0
             for count in range(0,255):
-                for w in range(0,int(lume[count])):
-                    output[(count * 100) + w] = 255
-            output = np.array(output)
-            output = output.reshape(256,100)
+                if lume[count] > 0:
+                    if lume[count] > old_lume:
+                        for y in range(old_lume,lume[count]):
+                           output[count, y,0] = 255
+                           output[count, y,1] = 255
+                           output[count, y,2] = 255
+                    else:
+                        for y in range(old_lume,lume[count],-1):
+                           output[count, y,0] = 255
+                           output[count, y,1] = 255
+                           output[count, y,2] = 255
+                if rede[count] > 0:
+                    if rede[count] > old_rede:
+                        for y in range(old_rede,rede[count]):
+                           output[count, y,0] = 255
+                    else:
+                        for y in range(old_rede,rede[count],-1):
+                           output[count, y,0] = 255
+                if greene[count] > 0:
+                    if greene[count] > old_greene:
+                        for y in range(old_greene,greene[count]):
+                           output[count, y,1] = 255
+                    else:
+                        for y in range(old_greene,greene[count],-1):
+                           output[count, y,1] = 255
+                if bluee[count] > 0:
+                    if bluee[count] > old_bluee:
+                        for y in range(old_bluee,bluee[count]):
+                           output[count, y,2] = 255
+                    else:
+                        for y in range(old_bluee,bluee[count],-1):
+                           output[count, y,2] = 255
+                old_lume = lume[count]
+                old_rede = rede[count]
+                old_greene = greene[count]
+                old_bluee = bluee[count]
             graph = pygame.surfarray.make_surface(output)
             graph = pygame.transform.flip(graph,0,1)
-            graph.set_alpha(127)
+            graph.set_alpha(160)
+            pygame.draw.rect(windowSurfaceObj,greyColor,Rect(9,preview_height-109,256,101),1)
             windowSurfaceObj.blit(graph, (10,preview_height-110))
             
             foc = cv2.Laplacian(gray, cv2.CV_64F).var()
             text(20,0,3,2,0,"Focus: " + str(int(foc)),fv* 2,0)
             pygame.draw.rect(windowSurfaceObj,redColor,Rect(xx-50,xy-50,100,100),1)
-            pygame.draw.line(windowSurfaceObj,redColor,(xx-25,xy),(xx+25,xy),1)
-            pygame.draw.line(windowSurfaceObj,redColor,(xx,xy-25),(xx,xy+25),1)
+            pygame.draw.line(windowSurfaceObj,(255,255,255),(xx-25,xy),(xx+25,xy),1)
+            pygame.draw.line(windowSurfaceObj,(255,255,255),(xx,xy-25),(xx,xy+25),1)
         else:
             text(0,0,6,2,0,"Preview",fv* 2,0)
             zxp = (zx -((preview_width/2) / (igw/preview_width)))
@@ -2100,7 +2156,10 @@ while True:
                 xx = min(xx,preview_width - 50)
                 xx = max(xx,50)
                 xy = mousey
-                xy = min(xy,preview_height - 50)
+                if Pi_Cam != 3:
+                    xy = min(xy,preview_height - 50)
+                else:
+                    xy = min(xy,int(preview_height * .75) - 50)
                 xy = max(xy,50)
                 if Pi_Cam == 3 and mousex < preview_width and mousey < preview_height *.75 and zoom == 0 and v3_f_mode == 0:
                     fxx = (xx - 25)/preview_width
