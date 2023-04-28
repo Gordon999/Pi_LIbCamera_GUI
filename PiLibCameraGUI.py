@@ -28,20 +28,21 @@ import cv2
 import glob
 from datetime import timedelta
 import numpy as np
+import math
 
-# version v4.37
+# version v4.38
 
-# set displayed preview image size (must be less than screen size to allow for the menu!!)
-# recommended 640x480 (Pi 7" screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY), 800x600, 1280x960, 1440x1080
-# for a FULL HD screen (1920x1080) and FULLSCREEN ON set preview_width = 1440, preview_height = 1080
+# Set displayed preview image size (must be less than screen size to allow for the menu!!)
+# Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
+# 800x600, 1280x960 or 1440x1080
+# For a FULL HD screen (1920x1080) and FULLSCREEN ON set preview_width = 1440, preview_height = 1080
 preview_width  = 800 
 preview_height = 600 
 fullscreen     = 0   # set to 1 for FULLSCREEN
-frame          = 0   # set to 1 for no frame (i.e. if using Pi 7" touchscreen)
+frame          = 1   # set to 0 for NO frame (i.e. if using Pi 7" touchscreen)
 
 # set sq_dis = 1 for a square display, 0 for normal
 sq_dis = 0
-
 
 # set default values (see limits below)
 mode        = 1       # set camera mode ['manual','normal','sport'] 
@@ -58,28 +59,15 @@ fps         = 25      # video fps
 vformat     = 10      # set video format (10 = 1920x1080)
 codec       = 0       # set video codec  (0 = h264)
 tinterval   = 60      # time between timelapse shots in seconds
-tshots      = 60      # number of timelapse shots
+tshots      = 10      # number of timelapse shots
 saturation  = 10      # picture colour saturation
-meter       = 0       # metering mode ( 0 = centre)
-awb         = 1       # auto white balance mode, off, auto etc ( 1 = auto)
+meter       = 2       # metering mode (2 = average)
+awb         = 1       # auto white balance mode, off, auto etc (1 = auto)
 sharpness   = 15      # set sharpness level
 denoise     = 1       # set denoise level
 quality     = 93      # set quality level
 profile     = 0       # set h264 profile
 level       = 0       # set h264 level
-foc_man     = 0
-prev_fps    = 10 
-focus_fps   = 25 
-focus_mode  = 0
-v3_f_mode   = 0
-v3_f_range  = 0
-v3_f_speed  = 0
-v3_focus    = 480
-v3_hdr      = 0
-vpreview    = 1
-scientific  = 0
-scientif    = 0
-
 # NOTE if you change any of the above defaults you need to delete the con_file and restart.
 
 # default directories and files
@@ -105,6 +93,18 @@ max_64mp    = 435
 max_gs      = 15
 
 # inital parameters
+foc_man     = 0
+prev_fps    = 10 
+focus_fps   = 25 
+focus_mode  = 0
+v3_f_mode   = 0
+v3_f_range  = 0
+v3_f_speed  = 0
+v3_focus    = 480
+v3_hdr      = 0
+vpreview    = 1
+scientific  = 0
+scientif    = 0
 zx          = int(preview_width/2)
 zy          = int(preview_height/2)
 zoom        = 0
@@ -301,6 +301,7 @@ elif Pi_Cam == 4:               # Pi HQ
         scientif = 0
 else:
     max_vformat = max_vf_0
+print(scientif)
 if vformat > max_vformat:
     vformat = max_vformat
 vwidth    = vwidths[vformat]
@@ -320,7 +321,7 @@ sspeed = int(shutter * 1000000)
 if (shutter * 1000000) - int(shutter * 1000000) > 0.5:
     sspeed +=1
 pygame.init()
-if frame == 0:
+if frame == 1:
     if sq_dis == 0 and fullscreen == 1:
         windowSurfaceObj = pygame.display.set_mode((preview_width + (bw*2),dis_height),  pygame.FULLSCREEN, 24)
     elif sq_dis == 0 and fullscreen == 0:
@@ -408,13 +409,13 @@ def text(col,row,fColor,top,upd,msg,fsize,bkgnd_Color):
     msgRectobj = msgSurfaceObj.get_rect()
     if top == 0:
         pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+1,by+int(bh/3),bw-2,int(bh/3)))
-        msgRectobj.topleft = (bx + 5, by + int(bh/3))
+        msgRectobj.topleft = (bx + 5, by + int(bh/3)-int(preview_width/640))
     elif msg == "Config":
         pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+1,by+int(bh/1.5),int(bw/2),int(bh/3)-1))
         msgRectobj.topleft = (bx+5,  by + int(bh/1.5)-1)
     elif top == 1:
         pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+20,by+int(bh/1.5),int(bw-21),int(bh/3)-1))
-        msgRectobj.topleft = (bx + 20, by + int(bh/1.5)-1) 
+        msgRectobj.topleft = (bx + 20, by + int(bh/1.5)-int(preview_width/640)-1) 
     elif top == 2:
         if bkgnd_Color == 1:
             pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,row * fsize,preview_width,fv*2))
@@ -790,14 +791,35 @@ while True:
         if zoom > 0 or foc_man == 1:
             image2 = pygame.surfarray.pixels3d(image)
             crop2 = image2[xx-50:xx+50,xy-50:xy+50]
+            #crop3 = pygame.surfarray.make_surface(crop2)
+            #windowSurfaceObj.blit(crop3, (100,200))
             if (zoom > 0 and foc_man != 1) or (zoom > 0 and foc_man == 1):
                 red1 = crop2[:,:,0]
                 green1 = crop2[:,:,1]
                 blue1 = crop2[:,:,2]
                 text(20,1,3,2,0,"R: " + str(int(np.sum(red1)/10000))+" G: " +str(int(np.sum(green1)/10000))+" B: "+str(int(np.sum(blue1)/10000)),fv* 2,0)
             gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
+            gray2 = gray.reshape(10000,1)
+            lume = [0] * 256
+            for q in range(0,len(gray2)):
+                lume[int(gray2[q])] +=1
+            for t in range(0,256):
+                if lume[t] > 0:
+                    lume[t] = int(50*math.log10(lume[t]) - 49)
+            output = [0] * 25600
+            for count in range(0,255):
+                for w in range(0,int(lume[count])):
+                    output[(count * 100) + w] = 255
+            output = np.array(output)
+            output = output.reshape(256,100)
+            graph = pygame.surfarray.make_surface(output)
+            graph = pygame.transform.flip(graph,0,1)
+            graph.set_alpha(127)
+            windowSurfaceObj.blit(graph, (10,preview_height-110))
+            
             foc = cv2.Laplacian(gray, cv2.CV_64F).var()
             text(20,0,3,2,0,"Focus: " + str(int(foc)),fv* 2,0)
+            pygame.draw.rect(windowSurfaceObj,redColor,Rect(xx-50,xy-50,100,100),1)
             pygame.draw.line(windowSurfaceObj,redColor,(xx-25,xy),(xx+25,xy),1)
             pygame.draw.line(windowSurfaceObj,redColor,(xx,xy-25),(xx,xy+25),1)
         else:
@@ -2075,11 +2097,11 @@ while True:
             mousex, mousey = event.pos
             if mousex < preview_width and mousey < preview_height:
                 xx = mousex
-                xx = min(xx,preview_width - 25)
-                xx = max(xx,25)
+                xx = min(xx,preview_width - 50)
+                xx = max(xx,50)
                 xy = mousey
-                xy = min(xy,preview_height - 25)
-                xy = max(xy,25)
+                xy = min(xy,preview_height - 50)
+                xy = max(xy,50)
                 if Pi_Cam == 3 and mousex < preview_width and mousey < preview_height *.75 and zoom == 0 and v3_f_mode == 0:
                     fxx = (xx - 25)/preview_width
                     xy  = min(xy,int((preview_height - 25) * .75))
@@ -2720,7 +2742,7 @@ while True:
                                 rpistr = "libcamera-vid -n --codec mjpeg -t " + str(tduration*1000) + " --segment 1 -o " + fname
                             else:
                                 fname =  pic_dir + str(timestamp) + '_%04d.' + codecs2[codec]
-                                rpistr = "libcamera-raw -n -t " + str(tduration*1000) + " --segment 1 -o " + fname
+                                rpistr = "libcamera-raw -n -t " + str(tduration*1000) + " --segment 1 -o " + fname # + " --mode 4056:3040:12:U" 
                             if zoom > 0:
                                 rpistr += " --width " + str(preview_width) + " --height " + str(preview_height)
                             else:
@@ -2760,7 +2782,7 @@ while True:
                                 zxo = ((igw/2)-(preview_width/2))/igw
                                 zyo = ((igh/2)-(preview_height/2))/igh
                                 rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)
-                            #print (rpistr)
+                            print (rpistr)
                             p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
                             start_timelapse = time.monotonic()
                             stop = 0
