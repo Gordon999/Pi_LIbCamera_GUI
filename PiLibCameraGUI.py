@@ -30,14 +30,14 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.39
+# version v4.40
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
 # 800x600, 1280x960 or 1440x1080
 # For a FULL HD screen (1920x1080) and FULLSCREEN ON set preview_width = 1440, preview_height = 1080
 preview_width  = 800 
-preview_height = 600 
+preview_height = 600
 fullscreen     = 0   # set to 1 for FULLSCREEN
 frame          = 1   # set to 0 for NO frame (i.e. if using Pi 7" touchscreen)
 
@@ -791,87 +791,88 @@ while True:
         if zoom > 0 or foc_man == 1:
             image2 = pygame.surfarray.pixels3d(image)
             crop2 = image2[xx-50:xx+50,xy-50:xy+50]
+            gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
             if (zoom > 0 and foc_man != 1) or (zoom > 0 and foc_man == 1):
                 red1 = crop2[:,:,0]
                 green1 = crop2[:,:,1]
                 blue1 = crop2[:,:,2]
                 text(20,1,3,2,0,"R: " + str(int(np.sum(red1)/10000))+" G: " +str(int(np.sum(green1)/10000))+" B: "+str(int(np.sum(blue1)/10000)),fv* 2,0)
-            gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
-            gray2 = gray.reshape(10000,1)
-            red2 = red1.reshape(10000,1)
-            green2 = green1.reshape(10000,1)
-            blue2 = blue1.reshape(10000,1)
-            lume = [0] * 256
-            rede = [0] * 256
-            greene = [0] * 256
-            bluee = [0] * 256
-            for q in range(0,len(gray2)):
-                lume[int(gray2[q])] +=1
-            for t in range(0,256):
-                if lume[t] > 0:
-                    lume[t] = int(25*math.log10(lume[t]))
-            for q in range(0,len(red2)):
-                rede[int(red2[q])] +=1
-            for t in range(0,256):
-                if rede[t] > 0:
-                    rede[t] = int(25*math.log10(rede[t]))
-            for q in range(0,len(green2)):
-                greene[int(green2[q])] +=1
-            for t in range(0,256):
-                if greene[t] > 0:
-                    greene[t] = int(25*math.log10(greene[t]))
-            for q in range(0,len(blue2)):
-                bluee[int(blue2[q])] +=1
-            for t in range(0,256):
-                if bluee[t] > 0:
-                    bluee[t] = int(25*math.log10(bluee[t]))
-            output = np.zeros((256,100,3))
-            old_lume = 0
-            old_rede = 0
-            old_greene = 0
-            old_bluee = 0
-            for count in range(0,255):
-                if lume[count] > 0:
-                    if lume[count] > old_lume:
-                        for y in range(old_lume,lume[count]):
-                           output[count, y,0] = 255
-                           output[count, y,1] = 255
-                           output[count, y,2] = 255
-                    else:
-                        for y in range(old_lume,lume[count],-1):
-                           output[count, y,0] = 255
-                           output[count, y,1] = 255
-                           output[count, y,2] = 255
-                if rede[count] > 0:
-                    if rede[count] > old_rede:
-                        for y in range(old_rede,rede[count]):
-                           output[count, y,0] = 255
-                    else:
-                        for y in range(old_rede,rede[count],-1):
-                           output[count, y,0] = 255
-                if greene[count] > 0:
-                    if greene[count] > old_greene:
-                        for y in range(old_greene,greene[count]):
-                           output[count, y,1] = 255
-                    else:
-                        for y in range(old_greene,greene[count],-1):
-                           output[count, y,1] = 255
-                if bluee[count] > 0:
-                    if bluee[count] > old_bluee:
-                        for y in range(old_bluee,bluee[count]):
-                           output[count, y,2] = 255
-                    else:
-                        for y in range(old_bluee,bluee[count],-1):
-                           output[count, y,2] = 255
-                old_lume = lume[count]
-                old_rede = rede[count]
-                old_greene = greene[count]
-                old_bluee = bluee[count]
-            graph = pygame.surfarray.make_surface(output)
-            graph = pygame.transform.flip(graph,0,1)
-            graph.set_alpha(160)
-            pygame.draw.rect(windowSurfaceObj,greyColor,Rect(9,preview_height-109,256,101),1)
-            windowSurfaceObj.blit(graph, (10,preview_height-110))
+                gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
+                gray2 = gray.reshape(10000,1)
+                red2 = red1.reshape(10000,1)
+                green2 = green1.reshape(10000,1)
+                blue2 = blue1.reshape(10000,1)
+                lume = [0] * 256
+                rede = [0] * 256
+                greene = [0] * 256
+                bluee = [0] * 256
+                for q in range(0,len(gray2)):
+                    lume[int(gray2[q])] +=1
+                for t in range(0,256):
+                    if lume[t] > 0:
+                        lume[t] = int(25*math.log10(lume[t]))
+                for q in range(0,len(red2)):
+                    rede[int(red2[q])] +=1
+                for t in range(0,256):
+                    if rede[t] > 0:
+                        rede[t] = int(25*math.log10(rede[t]))
+                for q in range(0,len(green2)):
+                    greene[int(green2[q])] +=1
+                for t in range(0,256):
+                    if greene[t] > 0:
+                        greene[t] = int(25*math.log10(greene[t]))
+                for q in range(0,len(blue2)):
+                    bluee[int(blue2[q])] +=1
+                for t in range(0,256):
+                    if bluee[t] > 0:
+                        bluee[t] = int(25*math.log10(bluee[t]))
+                output = np.zeros((256,100,3))
+                old_lume = 0
+                old_rede = 0
+                old_greene = 0
+                old_bluee = 0
+                for count in range(0,255):
+                    if lume[count] > 0:
+                        if lume[count] > old_lume:
+                            for y in range(old_lume,lume[count]):
+                                output[count, y,0] = 255
+                                output[count, y,1] = 255
+                                output[count, y,2] = 255
+                        else:
+                            for y in range(old_lume,lume[count],-1):
+                                output[count, y,0] = 255
+                                output[count, y,1] = 255
+                                output[count, y,2] = 255
+                    if rede[count] > 0:
+                        if rede[count] > old_rede:
+                            for y in range(old_rede,rede[count]):
+                                output[count, y,0] = 255
+                        else:
+                            for y in range(old_rede,rede[count],-1):
+                                output[count, y,0] = 255
+                    if greene[count] > 0:
+                        if greene[count] > old_greene:
+                            for y in range(old_greene,greene[count]):
+                                output[count, y,1] = 255
+                        else:
+                            for y in range(old_greene,greene[count],-1):
+                                output[count, y,1] = 255
+                    if bluee[count] > 0:
+                        if bluee[count] > old_bluee:
+                            for y in range(old_bluee,bluee[count]):
+                                output[count, y,2] = 255
+                        else:
+                            for y in range(old_bluee,bluee[count],-1):
+                                output[count, y,2] = 255
+                    old_lume = lume[count]
+                    old_rede = rede[count]
+                    old_greene = greene[count]
+                    old_bluee = bluee[count]
+                graph = pygame.surfarray.make_surface(output)
+                graph = pygame.transform.flip(graph,0,1)
+                graph.set_alpha(160)
+                pygame.draw.rect(windowSurfaceObj,greyColor,Rect(9,preview_height-109,256,101),1)
+                windowSurfaceObj.blit(graph, (10,preview_height-110))
             
             foc = cv2.Laplacian(gray, cv2.CV_64F).var()
             text(20,0,3,2,0,"Focus: " + str(int(foc)),fv* 2,0)
@@ -2156,10 +2157,10 @@ while True:
                 xx = min(xx,preview_width - 50)
                 xx = max(xx,50)
                 xy = mousey
-                if Pi_Cam != 3:
-                    xy = min(xy,preview_height - 50)
-                else:
+                if Pi_Cam == 3 and zoom < 5:
                     xy = min(xy,int(preview_height * .75) - 50)
+                else:
+                    xy = min(xy,preview_height - 50)
                 xy = max(xy,50)
                 if Pi_Cam == 3 and mousex < preview_width and mousey < preview_height *.75 and zoom == 0 and v3_f_mode == 0:
                     fxx = (xx - 25)/preview_width
