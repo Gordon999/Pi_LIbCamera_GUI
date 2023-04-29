@@ -2,7 +2,7 @@
 
 To work with RaspiOS based on BULLSEYE, using libcamera (NOT raspistill/raspivid).
 
-preview uses libcamera-vid, stills libcamera-still, videos libcamera-vid, timelapses depends on timings, libcamera-still, -vid or -raw
+preview uses libcamera-vid, stills libcamera-still, videos libcamera-vid, timelapses depends on timings and settings, libcamera-still, -vid or -raw
 
 At your own risk !!. Ensure you have any required software backed up.
 
