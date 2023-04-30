@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.40
+# version v4.41
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -68,12 +68,14 @@ denoise     = 1       # set denoise level
 quality     = 93      # set quality level
 profile     = 0       # set h264 profile
 level       = 0       # set h264 level
+histogram   = 0       # OFF = 0
+histarea    = 50      # set histogram size
 # NOTE if you change any of the above defaults you need to delete the con_file and restart.
 
 # default directories and files
 pic         = "Pictures"
 vid         = "Videos"
-con_file    = "PiLCConfig9.txt"
+con_file    = "PiLCConfig10.txt"
 
 # setup directories
 Home_Files  = []
@@ -151,12 +153,16 @@ denoises     = ['off','cdn_off','cdn_fast','cdn_hq']
 v3_f_modes   = ['auto','manual','continuous']
 v3_f_ranges  = ['normal','macro','full']
 v3_f_speeds  = ['normal','fast']
-still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,30,'brightness',-100,100,'contrast',0,200,'ev',-10,10,'blue',1,80,'sharpness',0,30,'denoise',0,len(denoises)-1,'quality',0,100,'red',1,80,'extn',0,len(extns)-1,'saturation',0,20,'meter',0,len(meters)-1,'awb',0,len(awbs)-1]
-video_limits = ['vlen',1,3600,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'zoom',0,5,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',0,1024]
-
+histograms   = ["OFF","Red","Green","Blue","Lum","ALL"]
+still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,30,'brightness',-100,100,'contrast',0,200,'ev',-10,10,'blue',1,80,'sharpness',0,30,
+                'denoise',0,len(denoises)-1,'quality',0,100,'red',1,80,'extn',0,len(extns)-1,'saturation',0,20,'meter',0,len(meters)-1,'awb',0,len(awbs)-1,
+                'histogram',0,len(histograms)-1]
+video_limits = ['vlen',1,3600,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'zoom',0,5,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,
+                'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',0,1024,'histarea',10,50]
 # check config_file exists, if not then write default values
 if not os.path.exists(config_file):
-    points = [mode,speed,gain,brightness,contrast,frame,red,blue,ev,vlen,fps,vformat,codec,tinterval,tshots,extn,zx,zy,zoom,saturation,meter,awb,sharpness,denoise,quality,profile,level]
+    points = [mode,speed,gain,brightness,contrast,frame,red,blue,ev,vlen,fps,vformat,codec,tinterval,tshots,extn,zx,zy,zoom,saturation,
+              meter,awb,sharpness,denoise,quality,profile,level,histogram,histarea]
     with open(config_file, 'w') as f:
         for item in points:
             f.write("%s\n" % item)
@@ -196,6 +202,8 @@ denoise     = config[23]
 quality     = config[24]
 profile     = config[25]
 level       = config[26]
+histogram   = config[27]
+histarea    = config[28]
 
 # Check for Pi Camera version
 if os.path.exists('test.jpg'):
@@ -414,7 +422,7 @@ def text(col,row,fColor,top,upd,msg,fsize,bkgnd_Color):
         pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+1,by+int(bh/1.5),int(bw/2),int(bh/3)-1))
         msgRectobj.topleft = (bx+5,  by + int(bh/1.5)-1)
     elif top == 1:
-        pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+20,by+int(bh/1.5)-1,int(bw-21),int(bh/3)-1))
+        pygame.draw.rect(windowSurfaceObj,bColor,Rect(bx+20,by+int(bh/1.5)-1,int(bw-21),int(bh/3)))
         msgRectobj.topleft = (bx + 20, by + int(bh/1.5)-int(preview_width/640)-1) 
     elif top == 2:
         if bkgnd_Color == 1:
@@ -582,6 +590,8 @@ button(1,0,0,3)
 button(1,7,0,2)
 button(1,9,0,2)
 button(1,13,0,5)
+button(1,14,0,5)
+button(0,14,0,5)
 
 # write button texts
 text(0,0,1,0,1,"CAPTURE",ft,7)
@@ -696,6 +706,10 @@ else:
     text(1,12,3,1,1," ",fv,12)
 text(1,13,2,0,1,"Save      EXIT",fv,7)
 text(1,13,2,1,1,"Config",fv,7)
+text(0,14,2,0,1,"Histogram",ft,7)
+text(0,14,3,1,1,histograms[histogram],fv,7)
+text(1,14,2,0,1,"Hist Area",ft,7)
+text(1,14,3,1,1,str(histarea),fv,7)
 
 # draw sliders
 draw_bar(0,1,lgrnColor,'mode',mode)
@@ -715,6 +729,7 @@ draw_bar(0,9,lgrnColor,'extn',extn)
 draw_bar(0,6,lgrnColor,'awb',awb)
 draw_bar(0,11,lgrnColor,'saturation',saturation)
 draw_bar(0,12,lgrnColor,'meter',meter)
+draw_bar(0,14,greyColor,'histogram',histogram)
 draw_Vbar(1,1,lpurColor,'vlen',vlen)
 draw_Vbar(1,2,lpurColor,'fps',fps)
 draw_Vbar(1,3,lpurColor,'vformat',vformat)
@@ -724,6 +739,7 @@ draw_Vbar(1,8,greyColor,'zoom',zoom)
 draw_Vbar(1,10,lyelColor,'tduration',tduration)
 draw_Vbar(1,11,lyelColor,'tinterval',tinterval)
 draw_Vbar(1,12,lyelColor,'tshots',tshots)
+draw_Vbar(1,14,greyColor,'histarea',histarea)
 
 
 
@@ -767,6 +783,7 @@ fxx = 0
 fxy = 0
 fxz = 1
 fyz = 1
+old_histarea = histarea
 
 # start preview
 text(0,0,6,2,1,"Please Wait for preview...",int(fv*1.7),1)
@@ -790,84 +807,95 @@ while True:
         windowSurfaceObj.blit(image, (0,0))
         if zoom > 0 or foc_man == 1:
             image2 = pygame.surfarray.pixels3d(image)
-            crop2 = image2[xx-50:xx+50,xy-50:xy+50]
+            crop2 = image2[xx-histarea:xx+histarea,xy-histarea:xy+histarea]
             gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
-            if (zoom > 0 and foc_man != 1) or (zoom > 0 and foc_man == 1):
-                red1 = crop2[:,:,0]
-                green1 = crop2[:,:,1]
-                blue1 = crop2[:,:,2]
-                text(20,1,3,2,0,"R: " + str(int(np.sum(red1)/10000))+" G: " +str(int(np.sum(green1)/10000))+" B: "+str(int(np.sum(blue1)/10000)),fv* 2,0)
-                gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
-                gray2 = gray.reshape(10000,1)
-                red2 = red1.reshape(10000,1)
-                green2 = green1.reshape(10000,1)
-                blue2 = blue1.reshape(10000,1)
-                lume = [0] * 256
-                rede = [0] * 256
-                greene = [0] * 256
-                bluee = [0] * 256
+            if zoom > 0 and histogram > 0:
+                if (histogram == 1 or histogram == 5):
+                    red1   = crop2[:,:,0]
+                    red2   = red1.reshape(histarea * histarea * 4,1)
+                    rede   = [0] * 256
+                if (histogram == 2 or histogram == 5):
+                    green1 = crop2[:,:,1]
+                    green2 = green1.reshape(histarea * histarea * 4,1)
+                    greene = [0] * 256
+                if (histogram == 3 or histogram == 5):
+                    blue1  = crop2[:,:,2]
+                    blue2  = blue1.reshape(histarea * histarea * 4,1)
+                    bluee  = [0] * 256
+                #text(20,1,3,2,0,"R: " + str(int(np.sum(red1)/10000))+" G: " +str(int(np.sum(green1)/10000))+" B: "+str(int(np.sum(blue1)/10000)),fv* 2,0)
+
+                gray2  = gray.reshape(histarea * histarea * 4,1)
+                lume   = [0] * 256
                 for q in range(0,len(gray2)):
-                    lume[int(gray2[q])] +=1
+                    if (histogram == 4 or histogram == 5):
+                        lume[int(gray2[q])] +=1
+                    if (histogram == 1 or histogram == 5):
+                        rede[int(red2[q])] +=1
+                    if (histogram == 2 or histogram == 5):
+                        greene[int(green2[q])] +=1
+                    if (histogram == 3 or histogram == 5):
+                        bluee[int(blue2[q])] +=1
                 for t in range(0,256):
-                    if lume[t] > 0:
-                        lume[t] = int(25*math.log10(lume[t]))
-                for q in range(0,len(red2)):
-                    rede[int(red2[q])] +=1
-                for t in range(0,256):
-                    if rede[t] > 0:
-                        rede[t] = int(25*math.log10(rede[t]))
-                for q in range(0,len(green2)):
-                    greene[int(green2[q])] +=1
-                for t in range(0,256):
-                    if greene[t] > 0:
-                        greene[t] = int(25*math.log10(greene[t]))
-                for q in range(0,len(blue2)):
-                    bluee[int(blue2[q])] +=1
-                for t in range(0,256):
-                    if bluee[t] > 0:
-                        bluee[t] = int(25*math.log10(bluee[t]))
+                    if histogram == 4 or histogram == 5:
+                        if lume[t] > 0:
+                            lume[t] = int(25*math.log10(lume[t]))
+                    if histogram == 1 or histogram == 5:
+                        if rede[t] > 0:
+                            rede[t] = int(25*math.log10(rede[t]))
+                    if histogram == 2 or histogram == 5:
+                        if greene[t] > 0:
+                            greene[t] = int(25*math.log10(greene[t]))
+                    if histogram == 3 or histogram == 5:
+                        if bluee[t] > 0:
+                            bluee[t] = int(25*math.log10(bluee[t]))
                 output = np.zeros((256,100,3))
-                old_lume = 0
-                old_rede = 0
+                old_lume   = 0
+                old_rede   = 0
                 old_greene = 0
-                old_bluee = 0
+                old_bluee  = 0
                 for count in range(0,255):
-                    if lume[count] > 0:
+                    if histogram == 4 or histogram == 5:
+                      if lume[count] > 0:
                         if lume[count] > old_lume:
-                            for y in range(old_lume,lume[count]):
-                                output[count, y,0] = 255
-                                output[count, y,1] = 255
-                                output[count, y,2] = 255
+                            st = 1
                         else:
-                            for y in range(old_lume,lume[count],-1):
-                                output[count, y,0] = 255
-                                output[count, y,1] = 255
-                                output[count, y,2] = 255
-                    if rede[count] > 0:
+                            st = -1
+                        for y in range(old_lume,lume[count],st):
+                            output[count, y,0] = 255
+                            output[count, y,1] = 255
+                            output[count, y,2] = 255
+                    if histogram == 1 or histogram == 5:
+                      if rede[count] > 0:
                         if rede[count] > old_rede:
-                            for y in range(old_rede,rede[count]):
-                                output[count, y,0] = 255
+                            st = 1
                         else:
-                            for y in range(old_rede,rede[count],-1):
-                                output[count, y,0] = 255
-                    if greene[count] > 0:
+                            st = -1
+                        for y in range(old_rede,rede[count],st):
+                            output[count, y,0] = 255
+                    if histogram == 2 or histogram == 5:
+                      if greene[count] > 0:
                         if greene[count] > old_greene:
-                            for y in range(old_greene,greene[count]):
-                                output[count, y,1] = 255
+                            st = 1
                         else:
-                            for y in range(old_greene,greene[count],-1):
-                                output[count, y,1] = 255
-                    if bluee[count] > 0:
+                            st = -1
+                        for y in range(old_greene,greene[count],st):
+                            output[count, y,1] = 255
+                    if histogram == 3 or histogram == 5:
+                      if bluee[count] > 0:
                         if bluee[count] > old_bluee:
-                            for y in range(old_bluee,bluee[count]):
-                                output[count, y,2] = 255
+                            st = 1
                         else:
-                            for y in range(old_bluee,bluee[count],-1):
-                                output[count, y,2] = 255
-                    old_lume = lume[count]
-                    old_rede = rede[count]
-                    old_greene = greene[count]
-                    old_bluee = bluee[count]
+                            st = -1
+                        for y in range(old_bluee,bluee[count],st):
+                            output[count, y,2] = 255
+                    if histogram == 4 or histogram == 5:
+                        old_lume   = lume[count]
+                    if histogram == 1 or histogram == 5:
+                        old_rede   = rede[count]
+                    if histogram == 2 or histogram == 5:
+                        old_greene = greene[count]
+                    if histogram == 3 or histogram == 5:
+                        old_bluee  = bluee[count]
                 graph = pygame.surfarray.make_surface(output)
                 graph = pygame.transform.flip(graph,0,1)
                 graph.set_alpha(160)
@@ -876,9 +904,9 @@ while True:
             
             foc = cv2.Laplacian(gray, cv2.CV_64F).var()
             text(20,0,3,2,0,"Focus: " + str(int(foc)),fv* 2,0)
-            pygame.draw.rect(windowSurfaceObj,redColor,Rect(xx-50,xy-50,100,100),1)
-            pygame.draw.line(windowSurfaceObj,(255,255,255),(xx-25,xy),(xx+25,xy),1)
-            pygame.draw.line(windowSurfaceObj,(255,255,255),(xx,xy-25),(xx,xy+25),1)
+            pygame.draw.rect(windowSurfaceObj,redColor,Rect(xx-histarea,xy-histarea,histarea*2,histarea*2),1)
+            pygame.draw.line(windowSurfaceObj,(255,255,255),(xx-int(histarea/2),xy),(xx+int(histarea/2),xy),1)
+            pygame.draw.line(windowSurfaceObj,(255,255,255),(xx,xy-int(histarea/2)),(xx,xy+int(histarea/2)),1)
         else:
             text(0,0,6,2,0,"Preview",fv* 2,0)
             zxp = (zx -((preview_width/2) / (igw/preview_width)))
@@ -1451,6 +1479,27 @@ while True:
                     text(0,13,3,1,1,"ON ",fv,10)
                 time.sleep(0.25)
                 restart = 1
+
+            elif button_row == 15:
+                # HISTOGRAM 
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'histogram':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    histogram = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    histogram = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        histogram -=1
+                        histogram = max(histogram,pmin)
+                    else:
+                        histogram +=1
+                        histogram = min(histogram,pmax)
+                text(0,14,3,1,1,histograms[histogram],fv,7)
+                draw_bar(0,14,greyColor,'histogram',histogram)
+                time.sleep(.25)
                
           elif button_column == 2:
             if button_row == 2:
@@ -2097,6 +2146,37 @@ while True:
                 draw_Vbar(1,10,lyelColor,'tduration',tduration)
                 time.sleep(.25)
 
+            elif button_row == 15:
+                # HISTOGRAM SIZE
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'histarea':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    histarea = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                    histarea = max(histarea,pmin)
+                elif (mousey > preview_height + (bh*3)  and mousey < preview_height + (bh*3) + int(bh/3)):
+                    histarea = int(((mousex-((button_row -8)*bw)) / bw) * (pmax+1-pmin))
+                    histarea = max(histarea,pmin)
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        histarea -=1
+                        histarea = max(histarea,pmin)
+                                               
+                    else:
+                        histarea +=1
+                        histarea = min(histarea,pmax)
+                if xx - histarea < 0 or xy - histarea < 0:
+                    histarea = old_histarea
+                if xy + histarea > preview_height or xx + histarea > preview_width:
+                    histarea = old_histarea
+                if Pi_Cam == 3 and (xy + histarea > preview_height * 0.75 or xx + histarea > preview_width):
+                    histarea = old_histarea
+                text(1,14,3,1,1,str(histarea),fv,7)
+                draw_Vbar(1,14,greyColor,'histarea',histarea)
+                old_histarea = histarea
+                time.sleep(.25)
+
                
             elif button_row == 14:
                 if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
@@ -2129,6 +2209,8 @@ while True:
                    config[24] = quality
                    config[25] = profile
                    config[26] = level
+                   config[27] = histogram
+                   config[28] = histarea
                    with open(config_file, 'w') as f:
                        for item in config:
                            f.write("%s\n" % item)
@@ -2154,14 +2236,14 @@ while True:
             mousex, mousey = event.pos
             if mousex < preview_width and mousey < preview_height:
                 xx = mousex
-                xx = min(xx,preview_width - 50)
-                xx = max(xx,50)
+                xx = min(xx,preview_width - histarea)
+                xx = max(xx,histarea)
                 xy = mousey
                 if Pi_Cam == 3 and zoom < 5:
-                    xy = min(xy,int(preview_height * .75) - 50)
+                    xy = min(xy,int(preview_height * .75) - histarea)
                 else:
-                    xy = min(xy,preview_height - 50)
-                xy = max(xy,50)
+                    xy = min(xy,preview_height - histarea)
+                xy = max(xy,histarea)
                 if Pi_Cam == 3 and mousex < preview_width and mousey < preview_height *.75 and zoom == 0 and v3_f_mode == 0:
                     fxx = (xx - 25)/preview_width
                     xy  = min(xy,int((preview_height - 25) * .75))
@@ -2842,7 +2924,7 @@ while True:
                                 zxo = ((igw/2)-(preview_width/2))/igw
                                 zyo = ((igh/2)-(preview_height/2))/igh
                                 rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)
-                            print (rpistr)
+                            #print (rpistr)
                             p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
                             start_timelapse = time.monotonic()
                             stop = 0
