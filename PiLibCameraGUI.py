@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.41
+# version v4.42
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -899,7 +899,10 @@ while True:
                 graph = pygame.surfarray.make_surface(output)
                 graph = pygame.transform.flip(graph,0,1)
                 graph.set_alpha(160)
-                pygame.draw.rect(windowSurfaceObj,greyColor,Rect(9,preview_height-109,256,101),1)
+                pygame.draw.rect(windowSurfaceObj,greyColor,Rect(9,preview_height-111,64,102),1)
+                pygame.draw.rect(windowSurfaceObj,greyColor,Rect(73,preview_height-111,64,102),1)
+                pygame.draw.rect(windowSurfaceObj,greyColor,Rect(137,preview_height-111,64,102),1)
+                pygame.draw.rect(windowSurfaceObj,greyColor,Rect(201,preview_height-111,66,102),1)
                 windowSurfaceObj.blit(graph, (10,preview_height-110))
             
             foc = cv2.Laplacian(gray, cv2.CV_64F).var()
@@ -962,6 +965,8 @@ while True:
                 elif Pi_Cam == 3 and ((vwidth == 1280 and vheight == 720) or (vwidth == 1536 and vheight == 864)):
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.175),int(preview_height * 0.15),int(preview_width * 0.66),int(preview_height * 0.48)),gw)
                 elif Pi_Cam == 3 and vwidth == 1640 and vheight == 1232:
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.12),0,int(preview_width * 0.75),int(preview_height * 0.75)),gw)
+                elif Pi_Cam == 3 and vwidth == 1456 and vheight == 1088:
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.12),0,int(preview_width * 0.75),int(preview_height * 0.75)),gw)
                 elif Pi_Cam == 7 and ((vwidth == 1920 and vheight == 1080) or (vwidth == 1280 and vheight == 720)):
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(0,int(preview_height * 0.12),int(preview_width),int(preview_height * 0.75)),gw)
