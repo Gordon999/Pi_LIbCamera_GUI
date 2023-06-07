@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.42
+# version v4.43
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -980,7 +980,9 @@ while True:
         pos = pygame.mouse.get_pos()
         mousex = pos[0]
         mousey = pos[1]
+        # determine button pressed
         if (mousex > preview_width) or (sq_dis == 1 and mousey > preview_height):
+          # normal layout(buttons on right)
           if mousex > preview_width:
               button_column = int((mousex-preview_width)/bw) + 1
               button_row = int((mousey)/bh) + 1
@@ -993,7 +995,7 @@ while True:
                   button_pos = 1
               else:
                   button_pos = 0
-              
+          # square layout(buttons below)    
           else:
               if mousey - preview_height < bh:
                   button_column = 1
@@ -1098,7 +1100,7 @@ while True:
                 restart = 1
 
             elif button_row == 3:
-                # SHUTTER SPEED or EV
+                # SHUTTER SPEED or EV (dependent on MODE set)
                 if mode == 0 :
                     for f in range(0,len(still_limits)-1,3):
                         if still_limits[f] == 'speed':
@@ -1351,7 +1353,7 @@ while True:
                 restart = 1
                 
             elif button_row == 10:
-                # EXTN
+                # EXTENSION
                 for f in range(0,len(still_limits)-1,3):
                     if still_limits[f] == 'extn':
                         pmin = still_limits[f+1]
@@ -1452,7 +1454,7 @@ while True:
                 restart = 1
 
             elif button_row == 14 and Pi_Cam == 3:
-                # v3 camera HDR
+                # PI V3 CAMERA HDR
                 if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
                     v3_hdr -=1
                     v3_hdr  = max(v3_hdr ,0)
@@ -1469,7 +1471,7 @@ while True:
                 restart = 1
 
             elif button_row == 14 and Pi_Cam == 4 and scientif == 1:
-                # v4 camera Scientific.json
+                # v4 (HQ) CAMERA Scientific.json
                 if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
                     scientific -=1
                     scientific = max(scientific ,0)
@@ -2889,14 +2891,14 @@ while True:
                                 rpistr = "libcamera-vid -n --codec mjpeg -t " + str(tduration*1000) + " --segment 1 -o " + fname
                             else:
                                 fname =  pic_dir + str(timestamp) + '_%04d.' + codecs2[codec]
-                                rpistr = "libcamera-raw -n -t " + str(tduration*1000) + " --segment 1 -o " + fname # + " --mode 4056:3040:12:U" 
+                                rpistr = "libcamera-raw -n -t " + str(tduration*1000) + " --segment 1 -o " + fname  
                             if zoom > 0:
                                 rpistr += " --width " + str(preview_width) + " --height " + str(preview_height)
                             else:
                                 rpistr += " --width " + str(vwidth) + " --height " + str(vheight)
                             rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
                             if mode == 0:
-                                rpistr += " --shutter " + str(sspeed) + " --framerate " + str(fps)
+                                rpistr += " --shutter " + str(sspeed) + " --framerate " + str(1000000/sspeed)
                             else:
                                 rpistr += " --exposure " + str(modes[mode]) + " --framerate " + str(fps)
                             if ev != 0:
