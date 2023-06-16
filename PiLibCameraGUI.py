@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.43
+# version v4.44
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -2459,7 +2459,13 @@ while True:
                         timestamp = now.strftime("%y%m%d%H%M%S")
                         vname =  vid_dir + str(timestamp) + "." + codecs2[codec]
                         if codecs2[codec] != 'raw':
-                            rpistr = "libcamera-vid -t " + str(vlen * 1000) + " -o " + vname + " --framerate " + str(fps)
+                            rpistr = "libcamera-vid -t " + str(vlen * 1000) + " -o " + vname
+                            if mode != 0:
+                                rpistr += " --framerate " + str(fps)
+                            else:
+                                speed7 = sspeed
+                                speed7 = max(speed7,int((1/fps)*1000000))
+                                rpistr += " --framerate " + str(int((1/speed7)*1000000))
                             if codecs[codec] != 'h264':
                                 rpistr += " --codec " + codecs[codec]
                             else:
