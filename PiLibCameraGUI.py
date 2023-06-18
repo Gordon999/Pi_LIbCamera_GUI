@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.44
+# version v4.45
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -2969,7 +2969,8 @@ while True:
                                             os.killpg(p.pid, signal.SIGTERM)
                                             stop = 1
                         button(1,9,0,2)
-                        text(1,12,3,1,1,str(tshots),fv,12)
+                        if tinterval != 0:
+                            text(1,12,3,1,1,str(tshots),fv,12)
                         td = timedelta(seconds=tduration)
                         text(1,10,3,1,1,str(td),fv,12)
                         text(0,0,1,0,1,"CAPTURE",ft,7)
