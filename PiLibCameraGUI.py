@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.45
+# version v4.46
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -70,12 +70,15 @@ profile     = 0       # set h264 profile
 level       = 0       # set h264 level
 histogram   = 0       # OFF = 0
 histarea    = 50      # set histogram size
+v3_f_mode   = 0       # v3 focus mode
+v3_f_range  = 0       # v3 focus range
+v3_f_speed  = 0       # v3 focus speed
 # NOTE if you change any of the above defaults you need to delete the con_file and restart.
 
 # default directories and files
 pic         = "Pictures"
 vid         = "Videos"
-con_file    = "PiLCConfig10.txt"
+con_file    = "PiLCConfig11.txt"
 
 # setup directories
 Home_Files  = []
@@ -99,9 +102,6 @@ foc_man     = 0
 prev_fps    = 10 
 focus_fps   = 25 
 focus_mode  = 0
-v3_f_mode   = 0
-v3_f_range  = 0
-v3_f_speed  = 0
 v3_focus    = 480
 v3_hdr      = 0
 vpreview    = 1
@@ -125,9 +125,9 @@ else:
 
 # set button sizes
 bw = int(preview_width/8)
-bh = int(preview_height/15)
-ft = int(preview_width/52)
-fv = int(preview_width/52)
+bh = int(preview_height/16)
+ft = int(preview_width/55)
+fv = int(preview_width/55)
 
 # data
 cameras      = ['Unknown','Pi v1','Pi v2','Pi v3','Pi HQ','Arducam 16MP','Arducam 64MP','Pi GS']
@@ -156,13 +156,13 @@ v3_f_speeds  = ['normal','fast']
 histograms   = ["OFF","Red","Green","Blue","Lum","ALL"]
 still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,30,'brightness',-100,100,'contrast',0,200,'ev',-10,10,'blue',1,80,'sharpness',0,30,
                 'denoise',0,len(denoises)-1,'quality',0,100,'red',1,80,'extn',0,len(extns)-1,'saturation',0,20,'meter',0,len(meters)-1,'awb',0,len(awbs)-1,
-                'histogram',0,len(histograms)-1]
+                'histogram',0,len(histograms)-1,'v3_f_speed',0,len(v3_f_speeds)-1]
 video_limits = ['vlen',1,3600,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'zoom',0,5,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,
-                'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',0,1024,'histarea',10,50]
+                'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',0,1024,'histarea',10,50,'v3_f_range',0,len(v3_f_ranges)-1]
 # check config_file exists, if not then write default values
 if not os.path.exists(config_file):
     points = [mode,speed,gain,brightness,contrast,frame,red,blue,ev,vlen,fps,vformat,codec,tinterval,tshots,extn,zx,zy,zoom,saturation,
-              meter,awb,sharpness,denoise,quality,profile,level,histogram,histarea]
+              meter,awb,sharpness,denoise,quality,profile,level,histogram,histarea,v3_f_speed,v3_f_range]
     with open(config_file, 'w') as f:
         for item in points:
             f.write("%s\n" % item)
@@ -204,6 +204,8 @@ profile     = config[25]
 level       = config[26]
 histogram   = config[27]
 histarea    = config[28]
+v3_f_speed  = config[29]
+v3_f_range  = config[30]
 
 # Check for Pi Camera version
 if os.path.exists('test.jpg'):
@@ -309,7 +311,6 @@ elif Pi_Cam == 4:               # Pi HQ
         scientif = 0
 else:
     max_vformat = max_vf_0
-print(scientif)
 if vformat > max_vformat:
     vformat = max_vformat
 vwidth    = vwidths[vformat]
@@ -553,10 +554,14 @@ def preview():
     rpistr += " --quality " + str(quality)
     if (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0:
         rpistr += " --autofocus "
-    if Pi_Cam == 3 and v3_f_mode > 0 :
+    if Pi_Cam == 3 and v3_f_mode > 0 and fxx == 0:
         rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
-    elif Pi_Cam == 3 and zoom == 0:
+    elif Pi_Cam == 3 and zoom == 0 and fxx != 0 and v3_f_mode != 1:
         rpistr += " --autofocus-window " + str(fxx) + "," + str(fxy) + "," + str(fxz) + "," + str(fxz)
+    if Pi_Cam == 3 and v3_f_speed != 0:
+        rpistr += " --autofocus-speed " + v3_f_speeds[v3_f_speed]
+    if Pi_Cam == 3 and v3_f_range != 0:
+        rpistr += " --autofocus-range " + v3_f_ranges[v3_f_range]
     if Pi_Cam == 3 and v3_hdr == 1:
         rpistr += " --hdr"
     if Pi_Cam == 4 and scientific == 1:
@@ -585,6 +590,10 @@ for d in range(10,13):
         button(1,d,8,2)
 if Pi_Cam == 3 or (Pi_Cam == 4 and scientif == 1):
     button(0,13,6,4)
+if Pi_Cam == 3:
+    button(0,15,0,5)
+    button(1,15,0,5)
+    
 button(0,0,0,4)
 button(1,0,0,3)
 button(1,7,0,2)
@@ -710,6 +719,10 @@ text(0,14,2,0,1,"Histogram",ft,7)
 text(0,14,3,1,1,histograms[histogram],fv,7)
 text(1,14,2,0,1,"Hist Area",ft,7)
 text(1,14,3,1,1,str(histarea),fv,7)
+text(0,15,2,0,1,"Focus Speed",ft,7)
+text(0,15,3,1,1,v3_f_speeds[v3_f_speed],fv,7)
+text(1,15,2,0,1,"Focus Range",ft,7)
+text(1,15,3,1,1,v3_f_ranges[v3_f_range],fv,7)
 
 # draw sliders
 draw_bar(0,1,lgrnColor,'mode',mode)
@@ -730,6 +743,8 @@ draw_bar(0,6,lgrnColor,'awb',awb)
 draw_bar(0,11,lgrnColor,'saturation',saturation)
 draw_bar(0,12,lgrnColor,'meter',meter)
 draw_bar(0,14,greyColor,'histogram',histogram)
+if Pi_Cam == 3:
+    draw_bar(0,15,greyColor,'v3_f_speed',v3_f_speed)
 draw_Vbar(1,1,lpurColor,'vlen',vlen)
 draw_Vbar(1,2,lpurColor,'fps',fps)
 draw_Vbar(1,3,lpurColor,'vformat',vformat)
@@ -740,6 +755,8 @@ draw_Vbar(1,10,lyelColor,'tduration',tduration)
 draw_Vbar(1,11,lyelColor,'tinterval',tinterval)
 draw_Vbar(1,12,lyelColor,'tshots',tshots)
 draw_Vbar(1,14,greyColor,'histarea',histarea)
+if Pi_Cam == 3:
+    draw_Vbar(1,15,greyColor,'v3_f_range',v3_f_range)
 
 
 
@@ -981,7 +998,7 @@ while True:
         mousex = pos[0]
         mousey = pos[1]
         # determine button pressed
-        if (mousex > preview_width) or (sq_dis == 1 and mousey > preview_height):
+        if mousex > preview_width or (sq_dis == 1 and mousey > preview_height):
           # normal layout(buttons on right)
           if mousex > preview_width:
               button_column = int((mousex-preview_width)/bw) + 1
@@ -995,6 +1012,7 @@ while True:
                   button_pos = 1
               else:
                   button_pos = 0
+              #print(button_column,button_row,button_pos)
           # square layout(buttons below)    
           else:
               if mousey - preview_height < bh:
@@ -1507,6 +1525,28 @@ while True:
                 text(0,14,3,1,1,histograms[histogram],fv,7)
                 draw_bar(0,14,greyColor,'histogram',histogram)
                 time.sleep(.25)
+
+            elif button_row == 16:
+                # V3 FOCUS SPEED 
+                for f in range(0,len(still_limits)-1,3):
+                    if still_limits[f] == 'v3_f_speed':
+                        pmin = still_limits[f+1]
+                        pmax = still_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    v3_f_speed = int(((mousex-preview_width) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + bh + int(bh/3)):
+                    v3_f_speed = int(((mousex-((button_row - 7)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        v3_f_speed-=1
+                        v3_f_speed = max(v3_f_speed,pmin)
+                    else:
+                        v3_f_speed +=1
+                        v3_f_speed = min(v3_f_speed,pmax)
+                text(0,15,3,1,1,v3_f_speeds[v3_f_speed],fv,7)
+                draw_bar(0,15,greyColor,'v3_f_speed',v3_f_speed)
+                restart = 1
+                time.sleep(.25)
                
           elif button_column == 2:
             if button_row == 2:
@@ -1925,9 +1965,9 @@ while True:
                         text(1,8,3,1,1,"",fv,7)
                         draw_Vbar(1,8,greyColor,'zoom',zoom)
                         restart = 1
-                    elif Pi_Cam == 3 and foc_man == 0:
+                    elif Pi_Cam == 3 and v3_f_mode == 0:
                         focus_mode = 1
-                        v3_f_mode = 1
+                        v3_f_mode = 1 # manual focus
                         foc_man = 1 # manual focus
                         button(1,7,1,9)
                         if os.path.exists("ctrls.txt"):
@@ -1984,7 +2024,26 @@ while True:
                         text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
                         time.sleep(0.25)
                         restart = 1
-                    elif Pi_Cam == 3 and foc_man == 1:
+                    elif Pi_Cam == 3 and v3_f_mode == 1:
+                        focus_mode = 0
+                        v3_f_mode = 2
+                        foc_man = 0
+                        zoom = 0
+                        fxx = 0
+                        fxy = 0
+                        fxz = 1
+                        fyz = 0.75
+                        pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,0,preview_width,preview_height))
+                        button(1,7,0,9)
+                        text(1,7,5,0,1,"FOCUS",ft,7)
+                        text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,7)
+                        button(1,8,0,9)
+                        text(1,8,5,0,1,"Zoom",ft,7)
+                        text(1,8,3,1,1,"",fv,7)
+                        text(1,3,3,1,1,str(vwidth) + "x" + str(vheight),fv,11)
+                        time.sleep(0.25)
+                        restart = 1
+                    elif Pi_Cam == 3 and v3_f_mode == 2:
                         focus_mode = 0
                         v3_f_mode = 0
                         foc_man = 0
@@ -2184,6 +2243,28 @@ while True:
                 old_histarea = histarea
                 time.sleep(.25)
 
+            elif button_row == 16:
+                # V3 FOCUS RANGE 
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'v3_f_range':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if (mousex > preview_width and mousey < ((button_row-1)*bh) + int(bh/3)):
+                    v3_f_range = int(((mousex-preview_width-bw) / bw) * (pmax+1-pmin))
+                elif (mousey > preview_height + bh  and mousey < preview_height + (bh*3) + int(bh/3)):
+                    v3_f_range = int(((mousex-((button_row - 8)*bw)) / bw) * (pmax+1-pmin))
+                else:
+                    if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
+                        v3_f_range-=1
+                        v3_f_range = max(v3_f_range,pmin)
+                    else:
+                        v3_f_range +=1
+                        v3_f_range = min(v3_f_range,pmax)
+                text(1,15,3,1,1,v3_f_ranges[v3_f_range],fv,7)
+                draw_Vbar(1,15,greyColor,'v3_f_range',v3_f_range)
+                restart = 1
+                time.sleep(.25)
+
                
             elif button_row == 14:
                 if (sq_dis == 0 and mousex < preview_width + bw + (bw/2)) or (sq_dis == 1 and button_pos == 0):
@@ -2218,6 +2299,8 @@ while True:
                    config[26] = level
                    config[27] = histogram
                    config[28] = histarea
+                   config[29] = v3_f_speed
+                   config[30] = v3_f_range
                    with open(config_file, 'w') as f:
                        for item in config:
                            f.write("%s\n" % item)
@@ -2251,7 +2334,7 @@ while True:
                 else:
                     xy = min(xy,preview_height - histarea)
                 xy = max(xy,histarea)
-                if Pi_Cam == 3 and mousex < preview_width and mousey < preview_height *.75 and zoom == 0 and v3_f_mode == 0:
+                if Pi_Cam == 3 and mousex < preview_width and mousey < preview_height *.75 and zoom == 0 and (v3_f_mode == 0 or v3_f_mode == 2):
                     fxx = (xx - 25)/preview_width
                     xy  = min(xy,int((preview_height - 25) * .75))
                     fxy = ((xy - 20) * 1.3333)/preview_height
@@ -2264,7 +2347,7 @@ while True:
                     fxy = 0
                     fxz = 1
                     fzy = 1
-                    if v3_f_mode == 0:
+                    if (v3_f_mode == 0 or v3_f_mode == 2):
                         text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,7)
                 if Pi_Cam == 3 and zoom == 0:
                     restart = 1
@@ -2503,10 +2586,14 @@ while True:
                         rpistr += " --denoise "    + denoises[denoise]
                         if (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0:
                             rpistr += " --autofocus "
-                        if Pi_Cam == 3 and v3_f_mode > 0 :
+                        if Pi_Cam == 3 and v3_f_mode > 0 and fxx == 0:
                             rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
-                        elif Pi_Cam == 3 and zoom == 0:
+                        elif Pi_Cam == 3 and zoom == 0 and fxx != 0 and v3_f_mode != 1:
                             rpistr += " --autofocus-window " + str(fxx) + "," + str(fxy) + "," + str(fxz) + "," + str(fxz)
+                        if Pi_Cam == 3 and v3_f_speed != 0:
+                            rpistr += " --autofocus-speed " + v3_f_speeds[v3_f_speed]
+                        if Pi_Cam == 3 and v3_f_range != 0:
+                            rpistr += " --autofocus-range " + v3_f_ranges[v3_f_range]
                         if Pi_Cam == 3 and v3_hdr == 1:
                             rpistr += " --hdr"
                         rpistr += " -p 0,0," + str(preview_width) + "," + str(preview_height)
