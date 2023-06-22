@@ -847,18 +847,18 @@ while True:
     if GPIO.input(21)== 0 and Pi_Cam == 3:
         if v3_f_mode != 1:
             v3_focus_manual()
-        v3_focus += 10
+        v3_focus += 1
         v3_focus = min(v3_focus,1024)
-        draw_Vbar(1,7,dgryColor,'focus',v3_focus)
+        draw_Vbar(1,7,dgryColor,'focus',v3_focus * 4)
         os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(v3_focus))
         text(1,7,3,0,1,'<<< ' + str(v3_focus) + ' >>>',fv,0)
     # focus DOWN
     if GPIO.input(26)== 0 and Pi_Cam == 3:
         if v3_f_mode != 1:
             v3_focus_manual()
-        v3_focus -= 10
+        v3_focus -= 1
         v3_focus = max(v3_focus,0)
-        draw_Vbar(1,7,dgryColor,'focus',v3_focus)
+        draw_Vbar(1,7,dgryColor,'focus',v3_focus * 4)
         os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(v3_focus))
         text(1,7,3,0,1,'<<< ' + str(v3_focus) + ' >>>',fv,0)
         
