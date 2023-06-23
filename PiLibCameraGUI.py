@@ -29,13 +29,9 @@ import glob
 from datetime import timedelta
 import numpy as np
 import math
-import RPi.GPIO as GPIO
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(21,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_up, button to gnd
-GPIO.setup(26,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_dn, button to gnd
 
-# version v4.47
+
+# version v4.48
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -45,6 +41,8 @@ preview_width  = 800
 preview_height = 600
 fullscreen     = 0   # set to 1 for FULLSCREEN
 frame          = 1   # set to 0 for NO frame (i.e. if using Pi 7" touchscreen)
+FUP            = 21 # Pi v3 camera Focus UP GPIO button
+FDN            = 26 # Pi v3 camera Focus DN GPIO button
 
 # set sq_dis = 1 for a square display, 0 for normal
 sq_dis = 0
@@ -240,6 +238,12 @@ if os.path.exists('test.jpg'):
         max_shutter = max_v3
         mag = 16
         max_gain = 64
+        import RPi.GPIO as GPIO
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(FUP,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_up, button to gnd
+        GPIO.setup(FDN,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_dn, button to gnd
+
     elif igw == 4056:
         Pi_Cam = 4
         mag = 22
@@ -587,15 +591,15 @@ def preview():
         pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,int(preview_height * .75),preview_width,int(preview_height *.24) ))
 
 def v3_focus_manual():
-    global focus_mode,v3_f_mode,foc_man,restart,v3_f_modes,focus,pmin,drgyColor,fv,video_limits,pmax
+    global focus_mode,v3_f_mode,foc_man,restart,v3_f_modes,v3_focus,v3_pmin,drgyColor,fv,video_limits,v3_pmax
     focus_mode = 1
     v3_f_mode = 1 # manual focus
     foc_man = 1 
     button(1,7,1,9)
     for f in range(0,len(video_limits)-1,3):
         if video_limits[f] == 'v3_focus':
-            pmin = video_limits[f+1]
-            pmax = video_limits[f+2]
+            v3_pmin = video_limits[f+1]
+            v3_pmax = video_limits[f+2]
     if os.path.exists("ctrls.txt"):
         os.remove("ctrls.txt")
     os.system("v4l2-ctl -d /dev/v4l-subdev1 --list-ctrls >> ctrls.txt")
@@ -610,7 +614,7 @@ def v3_focus_manual():
     v3_focus = int(foc_ctrl[1])
     restart = 1 
     os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
-    draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
+    draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-v3_pmin)
     text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
     text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,0)
     time.sleep(0.25)
@@ -844,23 +848,26 @@ preview()
 while True:
     time.sleep(0.1)
     # focus UP
-    if GPIO.input(21)== 0 and Pi_Cam == 3:
+    if GPIO.input(FUP)== 0 and Pi_Cam == 3:
         if v3_f_mode != 1:
             v3_focus_manual()
         v3_focus += 1
-        v3_focus = min(v3_focus,1024)
+        v3_focus = min(v3_focus,v3_pmax)
         draw_Vbar(1,7,dgryColor,'focus',v3_focus * 4)
         os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(v3_focus))
         text(1,7,3,0,1,'<<< ' + str(v3_focus) + ' >>>',fv,0)
+        time.sleep(0.25)
+
     # focus DOWN
-    if GPIO.input(26)== 0 and Pi_Cam == 3:
+    if GPIO.input(FDN)== 0 and Pi_Cam == 3:
         if v3_f_mode != 1:
             v3_focus_manual()
         v3_focus -= 1
-        v3_focus = max(v3_focus,0)
+        v3_focus = max(v3_focus,v3_pmin)
         draw_Vbar(1,7,dgryColor,'focus',v3_focus * 4)
         os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(v3_focus))
         text(1,7,3,0,1,'<<< ' + str(v3_focus) + ' >>>',fv,0)
+        time.sleep(0.25)
         
     pics = glob.glob('/run/shm/*.jpg')
     if len(pics) > 1:
