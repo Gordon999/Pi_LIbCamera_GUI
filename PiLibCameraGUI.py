@@ -31,7 +31,7 @@ import numpy as np
 import math
 
 
-# version v4.48
+# version v4.50
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -41,8 +41,8 @@ preview_width  = 800
 preview_height = 600
 fullscreen     = 0   # set to 1 for FULLSCREEN
 frame          = 1   # set to 0 for NO frame (i.e. if using Pi 7" touchscreen)
-FUP            = 21 # Pi v3 camera Focus UP GPIO button
-FDN            = 26 # Pi v3 camera Focus DN GPIO button
+FUP            = 21  # Pi v3 camera Focus UP GPIO button
+FDN            = 16  # Pi v3 camera Focus DN GPIO button
 
 # set sq_dis = 1 for a square display, 0 for normal
 sq_dis = 0
@@ -161,7 +161,7 @@ still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,30,'bri
                 'denoise',0,len(denoises)-1,'quality',0,100,'red',1,80,'extn',0,len(extns)-1,'saturation',0,20,'meter',0,len(meters)-1,'awb',0,len(awbs)-1,
                 'histogram',0,len(histograms)-1,'v3_f_speed',0,len(v3_f_speeds)-1]
 video_limits = ['vlen',1,3600,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'zoom',0,5,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,
-                'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',0,1024,'histarea',10,50,'v3_f_range',0,len(v3_f_ranges)-1]
+                'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',0,1023,'histarea',10,50,'v3_f_range',0,len(v3_f_ranges)-1]
 # check config_file exists, if not then write default values
 if not os.path.exists(config_file):
     points = [mode,speed,gain,brightness,contrast,frame,red,blue,ev,vlen,fps,vformat,codec,tinterval,tshots,extn,zx,zy,zoom,saturation,
@@ -848,7 +848,8 @@ preview()
 while True:
     time.sleep(0.1)
     # focus UP
-    if GPIO.input(FUP)== 0 and Pi_Cam == 3:
+    if Pi_Cam == 3:
+      if GPIO.input(FUP)== 0:
         if v3_f_mode != 1:
             v3_focus_manual()
         v3_focus += 1
@@ -859,7 +860,8 @@ while True:
         time.sleep(0.25)
 
     # focus DOWN
-    if GPIO.input(FDN)== 0 and Pi_Cam == 3:
+    if Pi_Cam == 3:
+      if GPIO.input(FDN)== 0:
         if v3_f_mode != 1:
             v3_focus_manual()
         v3_focus -= 1
