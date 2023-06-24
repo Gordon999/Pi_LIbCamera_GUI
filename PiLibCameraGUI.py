@@ -31,7 +31,7 @@ import numpy as np
 import math
 
 
-# version v4.50
+# version v4.51
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -757,10 +757,11 @@ text(0,14,2,0,1,"Histogram",ft,7)
 text(0,14,3,1,1,histograms[histogram],fv,7)
 text(1,14,2,0,1,"Hist Area",ft,7)
 text(1,14,3,1,1,str(histarea),fv,7)
-text(0,15,2,0,1,"Focus Speed",ft,7)
-text(0,15,3,1,1,v3_f_speeds[v3_f_speed],fv,7)
-text(1,15,2,0,1,"Focus Range",ft,7)
-text(1,15,3,1,1,v3_f_ranges[v3_f_range],fv,7)
+if Pi_Cam == 3 :
+    text(0,15,2,0,1,"Focus Speed",ft,7)
+    text(0,15,3,1,1,v3_f_speeds[v3_f_speed],fv,7)
+    text(1,15,2,0,1,"Focus Range",ft,7)
+    text(1,15,3,1,1,v3_f_ranges[v3_f_range],fv,7)
 
 # draw sliders
 draw_bar(0,1,lgrnColor,'mode',mode)
@@ -1588,7 +1589,7 @@ while True:
                 draw_bar(0,14,greyColor,'histogram',histogram)
                 time.sleep(.25)
 
-            elif button_row == 16:
+            elif button_row == 16 and Pi_Cam == 3:
                 # V3 FOCUS SPEED 
                 for f in range(0,len(still_limits)-1,3):
                     if still_limits[f] == 'v3_f_speed':
@@ -2305,7 +2306,7 @@ while True:
                 old_histarea = histarea
                 time.sleep(.25)
 
-            elif button_row == 16:
+            elif button_row == 16 and Pi_Cam == 3:
                 # V3 FOCUS RANGE 
                 for f in range(0,len(video_limits)-1,3):
                     if video_limits[f] == 'v3_f_range':
