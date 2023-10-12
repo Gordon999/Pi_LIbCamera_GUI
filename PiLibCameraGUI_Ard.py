@@ -873,7 +873,7 @@ while True:
         text(1,7,3,0,1,'<<< ' + str(v3_focus) + ' >>>',fv,0)
         time.sleep(0.25)
         
-    if Pi_Cam == 5 and (GPIO.input(FUP) == 0 or GPIO.input(FDN) == 0):
+    if (Pi_Cam == 5 or Pi_Cam == 6) and (GPIO.input(FUP) == 0 or GPIO.input(FDN) == 0):
         if foc_man == 0:
             for f in range(0,len(video_limits)-1,3):
                 if video_limits[f] == 'focus':
