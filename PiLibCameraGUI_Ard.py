@@ -103,6 +103,10 @@ max_gs      = 15
 # inital parameters
 focus       = 2000
 foc_man     = 0
+fcount      = 0
+fstep       = 20
+max_fcount  = 30
+max_foc     = 0
 prev_fps    = 10 
 focus_fps   = 25 
 focus_mode  = 0
@@ -531,9 +535,9 @@ def preview():
     speed2 = sspeed
     speed2 = min(speed2,2000000)
     rpistr = "libcamera-vid -n --codec mjpeg -t 0 --segment 1"
-    #if (Pi_Cam == 5 or Pi_Cam == 6) and focus_mode == 1:
-    #    rpistr += " --width 3280 --height 2464 -o /run/shm/test%d.jpg "
-    if Pi_Cam == 7 :
+    if (Pi_Cam == 5 or Pi_Cam == 6) and focus_mode == 1:
+        rpistr += " --width 3280 --height 2464 -o /run/shm/test%d.jpg "
+    elif Pi_Cam == 7 :
         rpistr += " --width 1456 --height 1088 -o /run/shm/test%d.jpg "
     elif Pi_Cam == 3 :
         rpistr += " --width 2304 --height 1296 -o /run/shm/test%d.jpg "
@@ -1022,6 +1026,35 @@ while True:
             
             foc = cv2.Laplacian(gray, cv2.CV_64F).var()
             text(20,0,3,2,0,"Focus: " + str(int(foc)),fv* 2,0)
+            if (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0 and fcount < max_fcount:
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'focus':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if foc < 20:
+                    fstep2 = fstep * 4
+                else:
+                    fstep2 = fstep
+                if foc > max_foc:
+                    max_foc = foc
+                    focus  += fstep2
+                    focus   = max(pmin,focus)
+                    focus   = min(pmax,focus)
+                    if focus == 0:
+                        focus = 2000
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                    time.sleep(.1)
+                elif foc < max_foc:
+                    max_foc = foc
+                    fstep2  = 0 - fstep2
+                    focus += fstep2
+                    focus  = max(pmin,focus)
+                    focus  = min(pmax,focus)
+                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                    time.sleep(.1)
+                fcount += 1
+                #print(focus,int(foc),int(max_foc))
+     
             pygame.draw.rect(windowSurfaceObj,redColor,Rect(xx-histarea,xy-histarea,histarea*2,histarea*2),1)
             pygame.draw.line(windowSurfaceObj,(255,255,255),(xx-int(histarea/2),xy),(xx+int(histarea/2),xy),1)
             pygame.draw.line(windowSurfaceObj,(255,255,255),(xx,xy-int(histarea/2)),(xx,xy+int(histarea/2)),1)
@@ -2072,21 +2105,9 @@ while True:
                         v3_f_mode = 1 # manual focus
                         foc_man = 1 
                         button(1,7,1,9)
-                        #if os.path.exists("ctrls.txt"):
-                        #    os.remove("ctrls.txt")
-                        #os.system("v4l2-ctl -d /dev/v4l-subdev1 --list-ctrls >> ctrls.txt")
                         restart = 1
                         time.sleep(0.25)
-                        #ctrlstxt = []
-                        #with open("ctrls.txt", "r") as file:
-                        #    line = file.readline()
-                        #    while line:
-                        #        ctrlstxt.append(line.strip())
-                        #        line = file.readline()
-                        #foc_ctrl = ctrlstxt[3].split('value=')
-                        #v3_focus = int(foc_ctrl[1])
                         restart = 1 
-                        #os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
                         draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
                         text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
                         text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,0)
@@ -2094,7 +2115,7 @@ while True:
                     elif (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0:
                         focus_mode = 1
                         foc_man = 1 # manual focus
-                        zoom = 0
+                        #zoom = 0
                         button(1,7,1,9)
                         if os.path.exists("ctrls.txt"):
                             os.remove("ctrls.txt")
@@ -2117,6 +2138,7 @@ while True:
                     elif (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 1:
                         focus_mode = 0
                         foc_man = 0
+                        fcount = 0
                         zoom = 0
                         button(1,7,0,9)
                         text(1,7,5,0,1,"FOCUS",ft,7)
@@ -2205,6 +2227,7 @@ while True:
                     fxy = 0
                     fxz = 1
                     fyz = 1
+                    fcount = 0
                     if Pi_Cam == 3 and v3_f_mode == 0:
                         text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,7)
                 restart = 1
@@ -2428,6 +2451,7 @@ while True:
         elif (event.type == MOUSEBUTTONUP):
             mousex, mousey = event.pos
             if mousex < preview_width and mousey < preview_height:
+                fcount = 0
                 xx = mousex
                 xx = min(xx,preview_width - histarea)
                 xx = max(xx,histarea)
