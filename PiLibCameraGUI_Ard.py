@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+7#!/usr/bin/env python3
 
 """Copyright (c) 2023
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -106,7 +106,7 @@ focus       = 2000
 foc_man     = 0
 fcount      = 0
 fstep       = 10
-max_fcount  = 30
+max_fcount  = 20
 old_foc     = 0
 ran         = 0
 prev_fps    = 10 
