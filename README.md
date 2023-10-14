@@ -7,7 +7,7 @@ preview uses libcamera-vid (so may not be as sharp as captured stills), stills l
 At your own risk !!. Ensure you have any required software backed up.
 
 Script to allow control of a Pi Camera. Will work with all Pi camera models, v1, v2, v3, HQ and GS. Also Arducam 16MP and 64MP Autofocus. 
-(Note for Arducam cameras you need to follow their installation instructions and install their version of libcamera)
+(Note for Arducam cameras you need to follow their installation instructions and install their version of libcamera, or try PiLibcameraGUI_Ard.py and the standard Libcamera)
 
 ## Screenshot
 
