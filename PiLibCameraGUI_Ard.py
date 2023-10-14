@@ -29,9 +29,10 @@ import glob
 from datetime import timedelta
 import numpy as np
 import math
+import random
 
 
-# version v4.52ard
+# version v4.53ard
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -41,8 +42,8 @@ preview_width  = 800
 preview_height = 600
 fullscreen     = 0   # set to 1 for FULLSCREEN
 frame          = 1   # set to 0 for NO frame (i.e. if using Pi 7" touchscreen)
-FUP            = 21  # Pi v3 camera Focus UP GPIO button
-FDN            = 16  # Pi v3 camera Focus DN GPIO button
+FUP            = 21  # Pi v3 or Ard 16/64MP camera Focus UP GPIO button
+FDN            = 16  # Pi v3 or Ard 16/64MP camera Focus DN GPIO button
 
 # set sq_dis = 1 for a square display, 0 for normal
 sq_dis = 0
@@ -104,9 +105,10 @@ max_gs      = 15
 focus       = 2000
 foc_man     = 0
 fcount      = 0
-fstep       = 20
+fstep       = 10
 max_fcount  = 30
-max_foc     = 0
+old_foc     = 0
+ran         = 0
 prev_fps    = 10 
 focus_fps   = 25 
 focus_mode  = 0
@@ -285,9 +287,9 @@ if os.path.exists('test.jpg'):
         mag = 16
         max_gain = 64
 else:
-    #print (" ")
-    #print (" No camera found !!")
-    #print (" Try rebooting if a camera is attached...")
+    print (" ")
+    print (" No camera found !!")
+    print (" Try rebooting if a camera is attached...")
     pygame.display.quit()
     sys.exit()
    
@@ -468,7 +470,7 @@ def draw_bar(col,row,color,msg,value):
     if msg == "speed":
         pmax = max_speed
     if sq_dis == 0:
-        pygame.draw.rect(windowSurfaceObj,color,Rect(preview_width + col*bw,row * bh,bw-1,int(bh/3)))
+        pygame.draw.rect(windowSurfaceObj,color,Rect(preview_width + col*bw + 1,row * bh,bw-1,int(bh/3)))
     else:
         if row < 6:
             pygame.draw.rect(windowSurfaceObj,color,Rect(row*bw,preview_height ,bw-1,int(bh/3)))
@@ -504,7 +506,7 @@ def draw_Vbar(col,row,color,msg,value):
     if msg == "vformat":
         pmax = max_vformat
     if sq_dis == 0:
-        pygame.draw.rect(windowSurfaceObj,color,Rect(preview_width + col*bw,row * bh,bw-1,int(bh/3)))
+        pygame.draw.rect(windowSurfaceObj,color,Rect(preview_width + col*bw + 1,row * bh,bw-1,int(bh/3)))
     else:
         if row < 7:
             pygame.draw.rect(windowSurfaceObj,color,Rect(row*bw,preview_height + (bh*2),bw-1,int(bh/3)))
@@ -535,7 +537,7 @@ def preview():
     speed2 = sspeed
     speed2 = min(speed2,2000000)
     rpistr = "libcamera-vid -n --codec mjpeg -t 0 --segment 1"
-    if (Pi_Cam == 5 or Pi_Cam == 6) and focus_mode == 1:
+    if (Pi_Cam == 5 or Pi_Cam == 6) and (focus_mode == 1 or zoom > 0):
         rpistr += " --width 3280 --height 2464 -o /run/shm/test%d.jpg "
     elif Pi_Cam == 7 :
         rpistr += " --width 1456 --height 1088 -o /run/shm/test%d.jpg "
@@ -576,8 +578,6 @@ def preview():
     rpistr += " --sharpness "  + str(sharpness/10)
     rpistr += " --denoise "    + denoises[denoise]
     rpistr += " --quality " + str(quality)
-    #if (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0:
-    #    rpistr += " --autofocus "
     if (Pi_Cam == 3 and v3_f_mode > 0 and fxx == 0) or ((Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0):
         rpistr += " --autofocus-mode " + v3_f_modes[v3_f_mode]
         if v3_f_mode == 1:
@@ -617,20 +617,7 @@ def v3_focus_manual():
         if video_limits[f] == 'v3_focus':
             v3_pmin = video_limits[f+1]
             v3_pmax = video_limits[f+2]
-    #if os.path.exists("ctrls.txt"):
-    #    os.remove("ctrls.txt")
-    #os.system("v4l2-ctl -d /dev/v4l-subdev1 --list-ctrls >> ctrls.txt")
-    #time.sleep(0.25)
-    #ctrlstxt = []
-    #with open("ctrls.txt", "r") as file:
-    #    line = file.readline()
-    #    while line:
-    #         ctrlstxt.append(line.strip())
-    #         line = file.readline()
-    #foc_ctrl = ctrlstxt[3].split('value=')
-    #v3_focus = int(foc_ctrl[1])
     restart = 1 
-    #os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
     draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-v3_pmin)
     text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
     text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,0)
@@ -941,7 +928,6 @@ while True:
                     blue1  = crop2[:,:,2]
                     blue2  = blue1.reshape(histarea * histarea * 4,1)
                     bluee  = [0] * 256
-                #text(20,1,3,2,0,"R: " + str(int(np.sum(red1)/10000))+" G: " +str(int(np.sum(green1)/10000))+" B: "+str(int(np.sum(blue1)/10000)),fv* 2,0)
 
                 gray2  = gray.reshape(histarea * histarea * 4,1)
                 lume   = [0] * 256
@@ -1026,35 +1012,43 @@ while True:
             
             foc = cv2.Laplacian(gray, cv2.CV_64F).var()
             text(20,0,3,2,0,"Focus: " + str(int(foc)),fv* 2,0)
+            
+            # ARDUCAM AF
             if (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0 and fcount < max_fcount:
                 for f in range(0,len(video_limits)-1,3):
                     if video_limits[f] == 'focus':
                         pmin = video_limits[f+1]
                         pmax = video_limits[f+2]
-                if foc < 20:
-                    fstep2 = fstep * 4
+                if foc >= 50:
+                    ran = 0
                 else:
-                    fstep2 = fstep
-                if foc > max_foc:
-                    max_foc = foc
-                    focus  += fstep2
-                    focus   = max(pmin,focus)
-                    focus   = min(pmax,focus)
-                    if focus == 0:
-                        focus = 2000
-                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
-                    time.sleep(.1)
-                elif foc < max_foc:
-                    max_foc = foc
-                    fstep2  = 0 - fstep2
-                    focus += fstep2
-                    focus  = max(pmin,focus)
-                    focus  = min(pmax,focus)
-                    os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
-                    time.sleep(.1)
+                    focus = random.randint(100, 4000)
+                    fcount = 1
+                    ran = 1
+                    old_foc = foc
+                if (int(foc) >= int(old_foc) or fcount == 0) and ran == 0:
+                    if fcount == 0:
+                        if focus < 2000:
+                            focus  += fstep
+                        else:
+                            focus  -= fstep
+                    else:        
+                        focus  += fstep
+                elif ran == 0:
+                    fstep = -fstep
+                    focus += fstep
+                #print(int(foc),int(old_foc),focus,fstep)
+                old_foc = foc
+                focus = max(pmin,focus)
+                focus = min(pmax,focus)
+                text(20,1,3,2,0,"Ctrl : " + str(int(focus)),fv* 2,0)
+                if focus < 100 or focus > 4000:
+                    focus = 2000
+                    fcount = 0
+                os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                time.sleep(.5)
                 fcount += 1
-                #print(focus,int(foc),int(max_foc))
-     
+                     
             pygame.draw.rect(windowSurfaceObj,redColor,Rect(xx-histarea,xy-histarea,histarea*2,histarea*2),1)
             pygame.draw.line(windowSurfaceObj,(255,255,255),(xx-int(histarea/2),xy),(xx+int(histarea/2),xy),1)
             pygame.draw.line(windowSurfaceObj,(255,255,255),(xx,xy-int(histarea/2)),(xx,xy+int(histarea/2)),1)
