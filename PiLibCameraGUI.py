@@ -31,7 +31,7 @@ import numpy as np
 import math
 
 
-# version v4.52
+# version v4.55
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -48,6 +48,8 @@ FDN            = 16  # Pi v3 camera Focus DN GPIO button
 sq_dis = 0
 
 # set default values (see limits below)
+rotate      = 0       # rotate preview ONLY, 0 = none, 1 = 90, 2 = 180, 3 = 270
+camera      = 0       # choose camera to use
 mode        = 1       # set camera mode ['manual','normal','sport'] 
 speed       = 16      # position in shutters list (16 = 1/125th)
 gain        = 0       # set gain 
@@ -81,7 +83,7 @@ v3_f_speed  = 0       # v3 focus speed
 # default directories and files
 pic         = "Pictures"
 vid         = "Videos"
-con_file    = "PiLCConfig11.txt"
+con_file    = "PiLCConfig12.txt"
 
 # setup directories
 Home_Files  = []
@@ -165,7 +167,7 @@ video_limits = ['vlen',1,3600,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'z
 # check config_file exists, if not then write default values
 if not os.path.exists(config_file):
     points = [mode,speed,gain,brightness,contrast,frame,red,blue,ev,vlen,fps,vformat,codec,tinterval,tshots,extn,zx,zy,zoom,saturation,
-              meter,awb,sharpness,denoise,quality,profile,level,histogram,histarea,v3_f_speed,v3_f_range]
+              meter,awb,sharpness,denoise,quality,profile,level,histogram,histarea,v3_f_speed,v3_f_range,rotate]
     with open(config_file, 'w') as f:
         for item in points:
             f.write("%s\n" % item)
@@ -209,15 +211,18 @@ histogram   = config[27]
 histarea    = config[28]
 v3_f_speed  = config[29]
 v3_f_range  = config[30]
+rotate      = rotate
 
-# Check for Pi Camera version
-if os.path.exists('test.jpg'):
+def Camera_Version():
+  # Check for Pi Camera version
+  global mag,max_gain,max_shutter,Pi_Cam,igw,camera
+  if os.path.exists('test.jpg'):
    os.rename('test.jpg', 'oldtest.jpg')
-rpistr = "libcamera-jpeg -n -t 1000 -e jpg -o test.jpg "
-os.system(rpistr)
-rpistr = ""
-time.sleep(2)
-if os.path.exists('test.jpg'):
+  rpistr = "libcamera-jpeg --camera " + str(camera) + " -n -t 1000 -e jpg -o test.jpg "
+  os.system(rpistr)
+  rpistr = ""
+  time.sleep(2)
+  if os.path.exists('test.jpg'):
     imagefile = 'test.jpg'
     image = pygame.image.load(imagefile)
     igw = image.get_width()
@@ -243,7 +248,6 @@ if os.path.exists('test.jpg'):
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(FUP,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_up, button to gnd
         GPIO.setup(FDN,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_dn, button to gnd
-
     elif igw == 4056:
         Pi_Cam = 4
         mag = 22
@@ -269,12 +273,14 @@ if os.path.exists('test.jpg'):
         max_shutter = max_v1
         mag = 16
         max_gain = 64
-else:
+  else:
     print (" ")
     print (" No camera found !!")
     print (" Try rebooting if a camera is attached...")
     pygame.display.quit()
     sys.exit()
+
+Camera_Version()
    
 still_limits[8] = max_gain
 
@@ -314,7 +320,7 @@ elif codec > 0 and Pi_Cam == 1: # Pi V1
     max_vformat = max_vf_1
 elif Pi_Cam == 4:               # Pi HQ
     max_vformat = max_vf_4a
-    if os.path.exists('/usr/share/libcamera/ipa/raspberrypi/imx477_scientific.json') and Pi_Cam == 4:
+    if os.path.exists('/usr/share/libcamera/ipa/rpi/vc4/imx477_scientific.json') and Pi_Cam == 4:
         scientif = 1
     else:
         scientif = 0
@@ -513,13 +519,13 @@ def draw_Vbar(col,row,color,msg,value):
     pygame.display.update()
 
 def preview():
-    global scientif,scientific,fxx,fxy,fxz,v3_focus,v3_hdr,v3_f_mode,v3_f_modes,prev_fps,focus_fps,focus_mode,restart,rpistr,count,p, brightness,contrast,modes,mode,red,blue,gain,sspeed,ev,preview_width,preview_height,zoom,igw,igh,zx,zy,awbs,awb,saturations,saturation,meters,meter,flickers,flicker,sharpnesss,sharpness
+    global scientif,scientific,fxx,fxy,fxz,v3_focus,v3_hdr,v3_f_mode,v3_f_modes,prev_fps,focus_fps,focus_mode,restart,rpistr,count,p, brightness,contrast,modes,mode,red,blue,gain,sspeed,ev,preview_width,preview_height,zoom,igw,igh,zx,zy,awbs,awb,saturations,saturation,meters,meter,flickers,flicker,sharpnesss,sharpness,rotate
     files = glob.glob('/run/shm/*')
     for f in files:
         os.remove(f)
     speed2 = sspeed
     speed2 = min(speed2,2000000)
-    rpistr = "libcamera-vid -n --codec mjpeg -t 0 --segment 1"
+    rpistr = "libcamera-vid --camera " + str(camera) + " -n --codec mjpeg -t 0 --segment 1"
     if (Pi_Cam == 5 or Pi_Cam == 6) and focus_mode == 1:
         rpistr += " --width 3280 --height 2464 -o /run/shm/test%d.jpg "
     elif Pi_Cam == 7 :
@@ -535,7 +541,7 @@ def preview():
             rpistr += " --width 1920 --height 1440 -o /run/shm/test%d.jpg "
     rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
     if mode == 0:
-        rpistr += " --shutter " + str(speed2)
+        rpistr += " --shutter " + str(speed2) 
     else:
         rpistr += " --exposure " + str(modes[mode]) 
     if zoom > 4 and (Pi_Cam < 5 or Pi_Cam == 7) and Pi_Cam != 3 and mode != 0:
@@ -576,7 +582,7 @@ def preview():
     if Pi_Cam == 3 and v3_hdr == 1:
         rpistr += " --hdr"
     if Pi_Cam == 4 and scientific == 1:
-        rpistr += " --tuning-file /usr/share/libcamera/ipa/raspberrypi/imx477_scientific.json"
+        rpistr += " --tuning-file /usr/share/libcamera/ipa/rpi/vc4/imx477_scientific.json"
     if zoom > 1 and zoom < 5:
         zxo = ((1920-zwidths[4 - zoom])/2)/1920
         zyo = ((1440-zheights[4 - zoom])/2)/1440
@@ -589,7 +595,7 @@ def preview():
     #print (rpistr)
     restart = 0
     time.sleep(0.2)
-    if Pi_Cam == 3:
+    if Pi_Cam == 3 and rotate == 0:
         pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,int(preview_height * .75),preview_width,int(preview_height *.24) ))
 
 def v3_focus_manual():
@@ -602,20 +608,7 @@ def v3_focus_manual():
         if video_limits[f] == 'v3_focus':
             v3_pmin = video_limits[f+1]
             v3_pmax = video_limits[f+2]
-    #if os.path.exists("ctrls.txt"):
-    #    os.remove("ctrls.txt")
-    #os.system("v4l2-ctl -d /dev/v4l-subdev1 --list-ctrls >> ctrls.txt")
-    #time.sleep(0.25)
-    #ctrlstxt = []
-    #with open("ctrls.txt", "r") as file:
-    #    line = file.readline()
-    #    while line:
-    #         ctrlstxt.append(line.strip())
-    #         line = file.readline()
-    #foc_ctrl = ctrlstxt[3].split('value=')
-    #v3_focus = int(foc_ctrl[1])
     restart = 1 
-    #os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
     draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-v3_pmin)
     text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
     text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,0)
@@ -885,7 +878,16 @@ while True:
         if Pi_Cam == 3 and zoom < 5:
             image = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
         else:
-            image = pygame.transform.scale(image, (preview_width,preview_height))
+            if rotate == 0:
+                image = pygame.transform.scale(image, (preview_width,preview_height))
+            else:
+                image = pygame.transform.rotate(image, int(rotate * 90))
+                if rotate != 2:
+                    igwr = image.get_width()
+                    ighr = image.get_height()
+                    image = pygame.transform.scale(image, (int(preview_height * (igwr/ighr)),preview_height))
+                else:
+                    image = pygame.transform.scale(image, (preview_width,preview_height))
         windowSurfaceObj.blit(image, (0,0))
         if zoom > 0 or foc_man == 1:
             image2 = pygame.surfarray.pixels3d(image)
@@ -904,7 +906,6 @@ while True:
                     blue1  = crop2[:,:,2]
                     blue2  = blue1.reshape(histarea * histarea * 4,1)
                     bluee  = [0] * 256
-                #text(20,1,3,2,0,"R: " + str(int(np.sum(red1)/10000))+" G: " +str(int(np.sum(green1)/10000))+" B: "+str(int(np.sum(blue1)/10000)),fv* 2,0)
 
                 gray2  = gray.reshape(histarea * histarea * 4,1)
                 lume   = [0] * 256
@@ -1018,9 +1019,9 @@ while True:
                 gw = 2
             else:
                 gw = 1
-            if Pi_Cam == 3 and fxz != 1 and zoom == 0:
+            if Pi_Cam == 3 and fxz != 1 and zoom == 0 and rotate == 0:
                 pygame.draw.rect(windowSurfaceObj,(200,0,0),Rect(int(fxx*preview_width),int(fxy*preview_height*.75),int(fxz*preview_width),int(fyz*preview_height)),1)
-            if (Pi_Cam == 5 or Pi_Cam == 6):
+            if (Pi_Cam == 5 or Pi_Cam == 6) and rotate == 0:
                 if vwidth == 1280 and vheight == 960:
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.20),int(preview_height * 0.22),int(preview_width * 0.62),int(preview_height * 0.57)),gw)
                 elif vwidth == 1280 and vheight == 720:
@@ -1033,7 +1034,7 @@ while True:
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.30),int(preview_height * 0.30),int(preview_width * 0.41),int(preview_height * 0.41)),gw)
                 elif (vwidth == 1920 and vheight == 1080) or (vwidth == 3840 and vheight == 2160):
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.09),int(preview_height * 0.20),int(preview_width * 0.82),int(preview_height * 0.62)),gw)
-            else:
+            elif rotate == 0:
                 if Pi_Cam == 1 and ((vwidth == 1920 and vheight == 1080) or (vwidth == 1280 and vheight == 720) or (vwidth == 1536 and vheight == 864)):
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.13),int(preview_height * 0.22),int(preview_width * 0.74),int(preview_height * 0.57)),gw)
                 elif Pi_Cam == 2 and ((vwidth == 1920 and vheight == 1080) or (vwidth == 1280 and vheight == 720) or (vwidth == 1536 and vheight == 864)):
@@ -1979,7 +1980,6 @@ while True:
                     draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
                     text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
                     restart = 1
-                    #os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
                 elif mousex > preview_width + bw and mousey > ((button_row-1)*bh) + (bh/3) and mousey < ((button_row-1)*bh) + (bh/1.5) and Pi_Cam == 3  and foc_man == 1:
                     if button_pos == 2:
                         v3_focus -= 1
@@ -1990,14 +1990,11 @@ while True:
                     draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
                     text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
                     restart = 1
-                    #os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
-
                 elif (mousey > preview_height + (bh*3) and mousey < preview_height + (bh*3) + (bh/3)) and Pi_Cam == 3 and foc_man == 1:
                     v3_focus = int(((mousex-((button_row - 8)*bw)) / bw)* pmax)
                     draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
                     text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
                     restart = 1
-                    #os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
                 elif mousey > preview_height + (bh*3) and mousey > preview_height + (bh*3) + (bh/3) and mousey < preview_height + (bh*3) + (bh/1.5) and Pi_Cam == 3 and foc_man == 1:
                     if button_pos == 0:
                         v3_focus -= 1
@@ -2007,7 +2004,6 @@ while True:
                     draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
                     text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
                     restart = 1
-                    #os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
                     
                 elif ((sq_dis == 0 and button_pos > 1) or (sq_dis == 1 and button_pos == 0)):
                     if (Pi_Cam < 3 or Pi_Cam == 4 or Pi_Cam == 7) and focus_mode == 0:
@@ -2039,21 +2035,9 @@ while True:
                         v3_f_mode = 1 # manual focus
                         foc_man = 1 
                         button(1,7,1,9)
-                        #if os.path.exists("ctrls.txt"):
-                        #    os.remove("ctrls.txt")
-                        #os.system("v4l2-ctl -d /dev/v4l-subdev1 --list-ctrls >> ctrls.txt")
                         restart = 1
                         time.sleep(0.25)
-                        #ctrlstxt = []
-                        #with open("ctrls.txt", "r") as file:
-                        #    line = file.readline()
-                        #    while line:
-                        #        ctrlstxt.append(line.strip())
-                        #        line = file.readline()
-                        #foc_ctrl = ctrlstxt[3].split('value=')
-                        #v3_focus = int(foc_ctrl[1])
                         restart = 1 
-                        #os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(int(v3_focus)))
                         draw_Vbar(1,7,dgryColor,'v3_focus',v3_focus-pmin)
                         text(1,7,3,0,1,'<<< ' + str(int(v3_focus)) + ' >>>',fv,0)
                         text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,0)
@@ -2370,6 +2354,7 @@ while True:
                    config[28] = histarea
                    config[29] = v3_f_speed
                    config[30] = v3_f_range
+                   config[31] = rotate
                    with open(config_file, 'w') as f:
                        for item in config:
                            f.write("%s\n" % item)
@@ -2393,7 +2378,7 @@ while True:
             pygame.quit()
         elif (event.type == MOUSEBUTTONUP):
             mousex, mousey = event.pos
-            if mousex < preview_width and mousey < preview_height:
+            if mousex < preview_width and mousey < preview_height and rotate == 0 and event.button != 3:
                 xx = mousex
                 xx = min(xx,preview_width - histarea)
                 xx = max(xx,histarea)
@@ -2420,6 +2405,18 @@ while True:
                         text(1,7,3,1,1,str(v3_f_modes[v3_f_mode]),fv,7)
                 if Pi_Cam == 3 and zoom == 0:
                     restart = 1
+                    
+            # SWITCH CAMERA
+            if mousex < preview_width and mousey < preview_height and rotate == 0 and event.button == 3:
+                camera += 1
+                if camera > 1:
+                    camera = 0
+                poll = p.poll()
+                if poll == None:
+                    os.killpg(p.pid, signal.SIGTERM)
+                Camera_Version()
+                restart = 1
+                
             if (sq_dis == 0 and mousex > preview_width) or (sq_dis == 1 and mousey > preview_height):
                 if sq_dis == 0:
                     button_column = int((mousex-preview_width)/bw) + 1
@@ -2485,10 +2482,10 @@ while True:
                         timestamp = now.strftime("%y%m%d%H%M%S")
                         if extns[extn] != 'raw':
                             fname =  pic_dir + str(timestamp) + '.' + extns2[extn]
-                            rpistr = "libcamera-still -e " + extns[extn] + " -n -t 5000 -o " + fname
+                            rpistr = "libcamera-still --camera " + str(camera) + " -e " + extns[extn] + " -n -t 5000 -o " + fname
                         else:
                             fname =  pic_dir + str(timestamp) + '.' + extns2[extn]
-                            rpistr = "libcamera-still -r -n -t 5000 -o " + fname
+                            rpistr = "libcamera-still --camera " + str(camera) + " -r -n -t 5000 -o " + fname
                             if preview_width == 640 and preview_height == 480 and zoom == 4:
                                 rpistr += " --rawfull"
                         rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
@@ -2576,6 +2573,8 @@ while True:
                         text(0,0,6,2,1,fname,int(fv*1.5),1)
                         pygame.display.update()
                         time.sleep(2)
+                        if rotate != 0:
+                            pygame.draw.rect(windowSurfaceObj,blackColor,Rect(0,0,preview_width,preview_height),0)
                         button(0,0,0,4)
                         text(0,0,1,0,1,"CAPTURE",ft,7)
                         text(1,0,1,0,1,"CAPTURE",ft,7)
@@ -2613,20 +2612,20 @@ while True:
                         timestamp = now.strftime("%y%m%d%H%M%S")
                         vname =  vid_dir + str(timestamp) + "." + codecs2[codec]
                         if codecs2[codec] != 'raw':
-                            rpistr = "libcamera-vid -t " + str(vlen * 1000) + " -o " + vname
+                            rpistr = "libcamera-vid --camera " + str(camera) + " -t " + str(vlen * 1000) + " -o " + vname
                             if mode != 0:
                                 rpistr += " --framerate " + str(fps)
                             else:
                                 speed7 = sspeed
                                 speed7 = max(speed7,int((1/fps)*1000000))
                                 rpistr += " --framerate " + str(int((1/speed7)*1000000))
-                            if codecs[codec] != 'h264':
+                            if codecs[codec] != 'h264' and codecs[codec] != 'mp4':
                                 rpistr += " --codec " + codecs[codec]
                             else:
                                 prof = h264profiles[profile].split(" ")
                                 rpistr += " --profile " + str(prof[0]) + " --level " + str(prof[1])
                         else:
-                            rpistr = "libcamera-raw -t " + str(vlen * 1000) + " -o " + vname + " --framerate " + str(fps)
+                            rpistr = "libcamera-raw --camera " + str(camera) + " -t " + str(vlen * 1000) + " -o " + vname + " --framerate " + str(fps)
                         if vpreview == 0:
                             rpistr += " -n "
                         rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
@@ -2678,7 +2677,7 @@ while True:
                             zxo = ((igw/2)-(preview_width/2))/igw
                             zyo = ((igh/2)-(preview_height/2))/igh
                             rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)                            
-                        #print (rpistr)
+                        print (rpistr)
                         p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
                         start_video = time.monotonic()
                         stop = 0
@@ -2756,9 +2755,9 @@ while True:
                             count = 0
                             fname =  pic_dir + str(timestamp) + '_%04d.' + extns2[extn]
                             if extns[extn] != 'raw':
-                                rpistr = "libcamera-still -e " + extns[extn] + " -s -n -t 0 -o " + fname
+                                rpistr = "libcamera-still --camera " + str(camera) + " -e " + extns[extn] + " -s -n -t 0 -o " + fname
                             else:
-                                rpistr = "libcamera-still -r -s -n -t 0 -o " + fname 
+                                rpistr = "libcamera-still --camera " + str(camera) + " -r -s -n -t 0 -o " + fname 
                                 if preview_width == 640 and preview_height == 480 and zoom >= 4:
                                     rpistr += " --rawfull"
                             rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
@@ -2816,7 +2815,7 @@ while True:
                             count = 0
                             old_count = 0
                             while count < tshots and stop == 0:
-                                if time.monotonic() - start2 > tinterval:
+                                if time.monotonic() - start2 >= tinterval:
                                     os.system('pkill -SIGUSR1 libcamera-still')
                                     start2 = time.monotonic()
                                     text(0,0,6,2,1,"Please Wait, taking Timelapse ..."  + " " + str(count+1),int(fv*1.7),1)
@@ -2831,16 +2830,16 @@ while True:
                                                 counts.append(pics3[xu])
                                         count = len(counts)
                                         counts.sort()
-                                        if (extns2[extn] == 'jpg' or extns2[extn] == 'bmp' or extns2[extn] == 'png') and count > 0 and show == 0:
-                                            image = pygame.image.load(counts[count-1])
-                                            if (Pi_Cam != 3) or (Pi_Cam == 3 and zoom == 5):
-                                                catSurfacesmall = pygame.transform.scale(image, (preview_width,preview_height))
-                                            else:
-                                                catSurfacesmall = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
-                                            windowSurfaceObj.blit(catSurfacesmall, (0, 0))
-                                            text(0,0,6,2,1,counts[count-1],int(fv*1.5),1)
-                                            pygame.display.update()
-                                            show == 1
+                                        #if (extns2[extn] == 'jpg' or extns2[extn] == 'bmp' or extns2[extn] == 'png') and count > 0 and show == 0:
+                                        #    image = pygame.image.load(counts[count-1])
+                                        #    if (Pi_Cam != 3) or (Pi_Cam == 3 and zoom == 5):
+                                        #        catSurfacesmall = pygame.transform.scale(image, (preview_width,preview_height))
+                                        #    else:
+                                        #        catSurfacesmall = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
+                                        #    windowSurfaceObj.blit(catSurfacesmall, (0, 0))
+                                        #    text(0,0,6,2,1,counts[count-1],int(fv*1.5),1)
+                                        #    pygame.display.update()
+                                        #    show == 1
                                         for event in pygame.event.get():
                                             if (event.type == MOUSEBUTTONUP):
                                                 mousex, mousey = event.pos
@@ -2919,9 +2918,9 @@ while True:
                                         time.sleep(0.1)
                                     fname =  pic_dir + str(timestamp) + "_" + str(count) + "." + extns2[extn]
                                     if extns[extn] != 'raw':
-                                        rpistr = "libcamera-still -e " + extns[extn] + " -n -t 1000 -o " + fname
+                                        rpistr = "libcamera-still --camera " + str(camera) + " -e " + extns[extn] + " -n -t 1000 -o " + fname
                                     else:
-                                        rpistr = "libcamera-still -r -n -t 1000 -o " + fname 
+                                        rpistr = "libcamera-still --camera " + str(camera) + " -r -n -t 1000 -o " + fname 
                                         if preview_width == 640 and preview_height == 480 and zoom >= 4:
                                             rpistr += " --rawfull"
                                     rpistr += " --brightness " + str(brightness/100) + " --contrast " + str(contrast/100)
@@ -3058,10 +3057,10 @@ while True:
                             timestamp = now.strftime("%y%m%d%H%M%S")
                             fname =  pic_dir + str(timestamp) + '_%04d.' + extns2[extn]
                             if codecs2[codec] != 'raw':
-                                rpistr = "libcamera-vid -n --codec mjpeg -t " + str(tduration*1000) + " --segment 1 -o " + fname
+                                rpistr = "libcamera-vid --camera " + str(camera) + " -n --codec mjpeg -t " + str(tduration*1000) + " --segment 1 -o " + fname
                             else:
                                 fname =  pic_dir + str(timestamp) + '_%04d.' + codecs2[codec]
-                                rpistr = "libcamera-raw -n -t " + str(tduration*1000) + " --segment 1 -o " + fname  
+                                rpistr = "libcamera-raw --camera " + str(camera) + " -n -t " + str(tduration*1000) + " --segment 1 -o " + fname  
                             if zoom > 0:
                                 rpistr += " --width " + str(preview_width) + " --height " + str(preview_height)
                             else:
