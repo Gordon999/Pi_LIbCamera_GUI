@@ -215,7 +215,7 @@ rotate      = rotate
 
 def Camera_Version():
   # Check for Pi Camera version
-  global mag,max_gain,max_shutter,Pi_Cam,igw,camera,FUP,FDN
+  global mag,max_gain,max_shutter,Pi_Cam,igw,camera,FUP,FDN,GPIO
   if os.path.exists('test.jpg'):
    os.rename('test.jpg', 'oldtest.jpg')
   rpistr = "libcamera-jpeg --camera " + str(camera) + " -n -t 1000 -e jpg -o test.jpg "
