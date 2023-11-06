@@ -31,7 +31,7 @@ import numpy as np
 import math
 
 
-# version v4.56
+# version v4.57
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -540,7 +540,7 @@ def draw_Vbar(col,row,color,msg,value):
 
 def preview():
     global scientif,scientific,fxx,fxy,fxz,v3_focus,v3_hdr,v3_f_mode,v3_f_modes,prev_fps,focus_fps,focus_mode,restart,rpistr,count,p, brightness,contrast,modes,mode,red,blue,gain,sspeed,ev,preview_width,preview_height,zoom,igw,igh,zx,zy,awbs,awb,saturations,saturation,meters,meter,flickers,flicker,sharpnesss,sharpness,rotate
-    files = glob.glob('/run/shm/*')
+    files = glob.glob('/run/shm/*.jpg')
     for f in files:
         os.remove(f)
     speed2 = sspeed
