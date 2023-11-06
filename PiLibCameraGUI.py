@@ -31,7 +31,7 @@ import numpy as np
 import math
 
 
-# version v4.55
+# version v4.56
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -215,9 +215,9 @@ rotate      = rotate
 
 def Camera_Version():
   # Check for Pi Camera version
-  global mag,max_gain,max_shutter,Pi_Cam,igw,camera,FUP,FDN,GPIO
+  global mag,max_gain,max_shutter,Pi_Cam,igw,camera,FUP,FDN,GPIO,still_limits
   if os.path.exists('test.jpg'):
-   os.rename('test.jpg', 'oldtest.jpg')
+      os.rename('test.jpg', 'oldtest.jpg')
   rpistr = "libcamera-jpeg --camera " + str(camera) + " -n -t 1000 -e jpg -o test.jpg "
   os.system(rpistr)
   rpistr = ""
@@ -273,6 +273,7 @@ def Camera_Version():
         max_shutter = max_v1
         mag = 16
         max_gain = 64
+    still_limits[8] = max_gain
   else:
     print (" ")
     print (" No camera found !!")
@@ -281,8 +282,27 @@ def Camera_Version():
     sys.exit()
 
 Camera_Version()
-   
-still_limits[8] = max_gain
+
+# DETERMINE NUMBER OF CAMERAS (FOR ARDUCAM MULITPLEXER)
+if os.path.exists('libcams.txt'):
+   os.rename('libcams.txt', 'oldlibcams.txt')
+os.system("libcamera-vid --list-cameras >> libcams.txt")
+time.sleep(0.5)
+# read libcams.txt file
+camstxt = []
+with open("libcams.txt", "r") as file:
+    line = file.readline()
+    while line:
+        camstxt.append(line.strip())
+        line = file.readline()
+max_camera = 0
+for x in range(0,len(camstxt)):
+    if camstxt[x][0:4] == "3 : " and max_camera < 3:
+        max_camera = 3
+    elif camstxt[x][0:4] == "2 : " and max_camera < 2:
+        max_camera = 2
+    elif camstxt[x][0:4] == "1 : " and max_camera < 1:
+        max_camera = 1
 
 if Pi_Cam == 5 or Pi_Cam == 6:
     # read /boot/config.txt file
@@ -632,8 +652,9 @@ button(1,0,0,3)
 button(1,7,0,2)
 button(1,9,0,2)
 button(1,13,0,5)
-button(1,14,0,5)
-button(0,14,0,5)
+if rotate == 0:
+    button(1,14,0,5)
+    button(0,14,0,5)
 
 # write button texts
 text(0,0,1,0,1,"CAPTURE",ft,7)
@@ -748,10 +769,11 @@ else:
     text(1,12,3,1,1," ",fv,12)
 text(1,13,2,0,1,"Save      EXIT",fv,7)
 text(1,13,2,1,1,"Config",fv,7)
-text(0,14,2,0,1,"Histogram",ft,7)
-text(0,14,3,1,1,histograms[histogram],fv,7)
-text(1,14,2,0,1,"Hist Area",ft,7)
-text(1,14,3,1,1,str(histarea),fv,7)
+if rotate == 0:
+    text(0,14,2,0,1,"Histogram",ft,7)
+    text(0,14,3,1,1,histograms[histogram],fv,7)
+    text(1,14,2,0,1,"Hist Area",ft,7)
+    text(1,14,3,1,1,str(histarea),fv,7)
 if Pi_Cam == 3 :
     text(0,15,2,0,1,"Focus Speed",ft,7)
     text(0,15,3,1,1,v3_f_speeds[v3_f_speed],fv,7)
@@ -776,7 +798,8 @@ draw_bar(0,9,lgrnColor,'extn',extn)
 draw_bar(0,6,lgrnColor,'awb',awb)
 draw_bar(0,11,lgrnColor,'saturation',saturation)
 draw_bar(0,12,lgrnColor,'meter',meter)
-draw_bar(0,14,greyColor,'histogram',histogram)
+if rotate == 0:
+    draw_bar(0,14,greyColor,'histogram',histogram)
 if Pi_Cam == 3:
     draw_bar(0,15,greyColor,'v3_f_speed',v3_f_speed)
 draw_Vbar(1,1,lpurColor,'vlen',vlen)
@@ -788,7 +811,8 @@ draw_Vbar(1,8,greyColor,'zoom',zoom)
 draw_Vbar(1,10,lyelColor,'tduration',tduration)
 draw_Vbar(1,11,lyelColor,'tinterval',tinterval)
 draw_Vbar(1,12,lyelColor,'tshots',tshots)
-draw_Vbar(1,14,greyColor,'histarea',histarea)
+if rotate == 0:
+    draw_Vbar(1,14,greyColor,'histarea',histarea)
 if Pi_Cam == 3:
     draw_Vbar(1,15,greyColor,'v3_f_range',v3_f_range)
 
@@ -876,7 +900,16 @@ while True:
         except pygame.error:
             pass
         if Pi_Cam == 3 and zoom < 5:
-            image = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
+            if rotate == 0:
+                image = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
+            else:
+                image = pygame.transform.rotate(image, int(rotate * 90))
+                if rotate != 2:
+                    igwr = image.get_width()
+                    ighr = image.get_height()
+                    image = pygame.transform.scale(image, (int(preview_height * (igwr/ighr)),preview_height))
+                else:
+                    image = pygame.transform.scale(image, (preview_width,preview_height))
         else:
             if rotate == 0:
                 image = pygame.transform.scale(image, (preview_width,preview_height))
@@ -888,7 +921,11 @@ while True:
                     image = pygame.transform.scale(image, (int(preview_height * (igwr/ighr)),preview_height))
                 else:
                     image = pygame.transform.scale(image, (preview_width,preview_height))
-        windowSurfaceObj.blit(image, (0,0))
+        if rotate == 1 or rotate == 3:
+            windowSurfaceObj.blit(image, (int((preview_width/2) - ((preview_height * (igwr/ighr)))/2),0))
+            pygame.draw.rect(windowSurfaceObj,(0,0,0),Rect(0,0,int(preview_width/3.5),int(preview_height/4) ))
+        else:
+            windowSurfaceObj.blit(image, (0,0))
         if zoom > 0 or foc_man == 1:
             image2 = pygame.surfarray.pixels3d(image)
             crop2 = image2[xx-histarea:xx+histarea,xy-histarea:xy+histarea]
@@ -2409,7 +2446,7 @@ while True:
             # SWITCH CAMERA
             if mousex < preview_width and mousey < preview_height and rotate == 0 and event.button == 3:
                 camera += 1
-                if camera > 1:
+                if camera > max_camera:
                     camera = 0
                 poll = p.poll()
                 if poll == None:
