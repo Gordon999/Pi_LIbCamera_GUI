@@ -31,7 +31,7 @@ import numpy as np
 import math
 
 
-# version v4.57
+# version v4.58
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -211,7 +211,7 @@ histogram   = config[27]
 histarea    = config[28]
 v3_f_speed  = config[29]
 v3_f_range  = config[30]
-rotate      = rotate
+#rotate      = config[31]
 
 def Camera_Version():
   # Check for Pi Camera version
@@ -1099,7 +1099,7 @@ while True:
                 if Pi_Cam == 2 and ((vwidth == 1920 and vheight == 1080) or (vwidth == 1280 and vheight == 720) or (vwidth == 1536 and vheight == 864)):
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_height * 0.51),int(preview_width * 0.15),int(preview_height * 0.33),int(preview_width * 0.45)),gw)
                 elif Pi_Cam == 2 and ((vwidth == 640 and vheight == 480) or (vwidth == 720 and vheight == 540)):
-                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_width * 0.30),int(preview_height * 0.30),int(preview_width * 0.41),int(preview_height * 0.41)),gw)
+                    pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_height * 0.50),int(preview_width * 0.22),int(preview_height * 0.33),int(preview_width * 0.31)),gw)
         pygame.display.update()
     
     # continuously read mouse buttons
