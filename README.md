@@ -1,6 +1,6 @@
 # Pi_LibCamera_GUI 
 
-To work with RaspiOS based on BULLSEYE, using libcamera (NOT raspistill/raspivid).
+To work with RaspiOS based on BULLSEYE / BOOKWORM, using libcamera (NOT raspistill/raspivid).
 
 preview uses libcamera-vid (so may not be as sharp as captured stills), stills libcamera-still, videos libcamera-vid, timelapses depends on timings and settings, libcamera-still, -vid or -raw. Note preview has a maximum shutter setting of 1 second.
 
