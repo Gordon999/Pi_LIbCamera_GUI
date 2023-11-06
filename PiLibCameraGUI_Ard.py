@@ -531,7 +531,7 @@ def draw_Vbar(col,row,color,msg,value):
 
 def preview():
     global scientif,scientific,fxx,fxy,fxz,v3_focus,v3_hdr,v3_f_mode,v3_f_modes,prev_fps,focus_fps,focus_mode,restart,rpistr,count,p, brightness,contrast,modes,mode,red,blue,gain,sspeed,ev,preview_width,preview_height,zoom,igw,igh,zx,zy,awbs,awb,saturations,saturation,meters,meter,flickers,flicker,sharpnesss,sharpness
-    files = glob.glob('/run/shm/*')
+    files = glob.glob('/run/shm/*.jpg')
     for f in files:
         os.remove(f)
     speed2 = sspeed
