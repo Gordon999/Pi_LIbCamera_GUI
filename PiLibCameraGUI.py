@@ -30,8 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-
-# version v4.58
+# version v4.59
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -164,6 +163,7 @@ still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,30,'bri
                 'histogram',0,len(histograms)-1,'v3_f_speed',0,len(v3_f_speeds)-1]
 video_limits = ['vlen',1,3600,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'zoom',0,5,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,
                 'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',0,1023,'histarea',10,50,'v3_f_range',0,len(v3_f_ranges)-1]
+
 # check config_file exists, if not then write default values
 if not os.path.exists(config_file):
     points = [mode,speed,gain,brightness,contrast,frame,red,blue,ev,vlen,fps,vformat,codec,tinterval,tshots,extn,zx,zy,zoom,saturation,
@@ -652,9 +652,8 @@ button(1,0,0,3)
 button(1,7,0,2)
 button(1,9,0,2)
 button(1,13,0,5)
-if rotate == 0:
-    button(1,14,0,5)
-    button(0,14,0,5)
+button(1,14,0,5)
+button(0,14,0,5)
 
 # write button texts
 text(0,0,1,0,1,"CAPTURE",ft,7)
@@ -769,11 +768,10 @@ else:
     text(1,12,3,1,1," ",fv,12)
 text(1,13,2,0,1,"Save      EXIT",fv,7)
 text(1,13,2,1,1,"Config",fv,7)
-if rotate == 0:
-    text(0,14,2,0,1,"Histogram",ft,7)
-    text(0,14,3,1,1,histograms[histogram],fv,7)
-    text(1,14,2,0,1,"Hist Area",ft,7)
-    text(1,14,3,1,1,str(histarea),fv,7)
+text(0,14,2,0,1,"Histogram",ft,7)
+text(0,14,3,1,1,histograms[histogram],fv,7)
+text(1,14,2,0,1,"Hist Area",ft,7)
+text(1,14,3,1,1,str(histarea),fv,7)
 if Pi_Cam == 3 :
     text(0,15,2,0,1,"Focus Speed",ft,7)
     text(0,15,3,1,1,v3_f_speeds[v3_f_speed],fv,7)
@@ -1123,7 +1121,6 @@ while True:
                   button_pos = 1
               else:
                   button_pos = 0
-              #print(button_column,button_row,button_pos)
           # square layout(buttons below)    
           else:
               if mousey - preview_height < bh:
@@ -2587,6 +2584,9 @@ while True:
                             pass
                         if extns2[extn] == 'jpg' or extns2[extn] == 'bmp' or extns2[extn] == 'png':
                             image = pygame.image.load(fname)
+                            if rotate != 0:
+                                image = pygame.transform.rotate(image, int(rotate * 90))
+                                pygame.image.save(image,fname[:-4]+"r." + extns2[extn])
                             if (Pi_Cam != 3) or (Pi_Cam == 3 and zoom == 5):
                                 catSurfacesmall = pygame.transform.scale(image, (preview_width,preview_height))
                             else:
@@ -2877,16 +2877,6 @@ while True:
                                                 counts.append(pics3[xu])
                                         count = len(counts)
                                         counts.sort()
-                                        #if (extns2[extn] == 'jpg' or extns2[extn] == 'bmp' or extns2[extn] == 'png') and count > 0 and show == 0:
-                                        #    image = pygame.image.load(counts[count-1])
-                                        #    if (Pi_Cam != 3) or (Pi_Cam == 3 and zoom == 5):
-                                        #        catSurfacesmall = pygame.transform.scale(image, (preview_width,preview_height))
-                                        #    else:
-                                        #        catSurfacesmall = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
-                                        #    windowSurfaceObj.blit(catSurfacesmall, (0, 0))
-                                        #    text(0,0,6,2,1,counts[count-1],int(fv*1.5),1)
-                                        #    pygame.display.update()
-                                        #    show == 1
                                         for event in pygame.event.get():
                                             if (event.type == MOUSEBUTTONUP):
                                                 mousex, mousey = event.pos
