@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.59
+# version v4.60
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -2449,7 +2449,7 @@ while True:
                     restart = 1
                     
             # SWITCH CAMERA
-            if mousex < preview_width and mousey < preview_height and rotate == 0 and event.button == 3:
+            if mousex < preview_width and mousey < preview_height and event.button == 3:
                 camera += 1
                 if camera > max_camera:
                     camera = 0
@@ -2587,11 +2587,31 @@ while True:
                             if rotate != 0:
                                 image = pygame.transform.rotate(image, int(rotate * 90))
                                 pygame.image.save(image,fname[:-4]+"r." + extns2[extn])
-                            if (Pi_Cam != 3) or (Pi_Cam == 3 and zoom == 5):
-                                catSurfacesmall = pygame.transform.scale(image, (preview_width,preview_height))
+                            if Pi_Cam == 3 and zoom < 5:
+                                if rotate == 0:
+                                    image = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
+                                else:
+                                    #image = pygame.transform.rotate(image, int(rotate * 90))
+                                    if rotate != 2:
+                                        igwr = image.get_width()
+                                        ighr = image.get_height()
+                                        image = pygame.transform.scale(image, (int(preview_height * (igwr/ighr)),preview_height))
+                                    else:
+                                        image = pygame.transform.scale(image, (preview_width,preview_height))
                             else:
-                                catSurfacesmall = pygame.transform.scale(image, (preview_width,int(preview_height * 0.75)))
-                            windowSurfaceObj.blit(catSurfacesmall, (0, 0))
+                                if rotate == 0 or rotate == 2:
+                                    image = pygame.transform.scale(image, (preview_width,preview_height))
+                                else:
+                                    if rotate != 2:
+                                        igwr = image.get_width()
+                                        ighr = image.get_height()
+                                        image = pygame.transform.scale(image, (int(preview_height * (igwr/ighr)),preview_height))
+                                    else:
+                                        image = pygame.transform.scale(image, (preview_width,preview_height))
+                            if rotate == 1 or rotate == 3:
+                                windowSurfaceObj.blit(image, (int((preview_width/2) - ((preview_height * (igwr/ighr)))/2),0))
+                            else:
+                                windowSurfaceObj.blit(image, (0,0))
                         dgain = 0
                         again = 0
                         etime = 0
