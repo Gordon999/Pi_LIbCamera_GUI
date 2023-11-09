@@ -557,7 +557,7 @@ def draw_Vbar(col,row,color,msg,value):
 
 def preview():
     global scientif,scientific,fxx,fxy,fxz,v3_focus,v3_hdr,v3_f_mode,v3_f_modes,prev_fps,focus_fps,focus_mode,restart,rpistr,count,p, brightness,contrast,modes,mode,red,blue,gain,sspeed,ev,preview_width,preview_height,zoom,igw,igh,zx,zy,awbs,awb,saturations,saturation,meters,meter,flickers,flicker,sharpnesss,sharpness
-    files = glob.glob('/run/shm/*')
+    files = glob.glob('/run/shm/*.jpg')
     for f in files:
         os.remove(f)
     speed2 = sspeed
@@ -1060,43 +1060,6 @@ while True:
                 pygame.draw.rect(windowSurfaceObj,blackColor,Rect(0,0,int(preview_width/4.5),int(preview_height/8)),0)
             foc = cv2.Laplacian(gray, cv2.CV_64F).var()
             text(20,0,3,2,0,"Focus: " + str(int(foc)),fv* 2,0)
-            
-            # ARDUCAM AF
-            if (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0 and fcount < max_fcount:
-                for f in range(0,len(video_limits)-1,3):
-                    if video_limits[f] == 'focus':
-                        pmin = video_limits[f+1]
-                        pmax = video_limits[f+2]
-                if foc >= 50:
-                    ran = 0
-                else:
-                    focus = random.randint(100, 4000)
-                    fcount = 1
-                    ran = 1
-                    old_foc = foc
-                if (int(foc) >= int(old_foc) or fcount == 0) and ran == 0:
-                    if fcount == 0:
-                        if focus < 2000:
-                            focus  += fstep
-                        else:
-                            focus  -= fstep
-                    else:        
-                        focus  += fstep
-                elif ran == 0:
-                    fstep = -fstep
-                    focus += fstep
-                #print(int(foc),int(old_foc),focus,fstep)
-                old_foc = foc
-                focus = max(pmin,focus)
-                focus = min(pmax,focus)
-                text(20,1,3,2,0,"Ctrl : " + str(int(focus)),fv* 2,0)
-                if focus < 100 or focus > 4000:
-                    focus = 2000
-                    fcount = 0
-                os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
-                time.sleep(.5)
-                fcount += 1
-                     
             pygame.draw.rect(windowSurfaceObj,redColor,Rect(xx-histarea,xy-histarea,histarea*2,histarea*2),1)
             pygame.draw.line(windowSurfaceObj,(255,255,255),(xx-int(histarea/2),xy),(xx+int(histarea/2),xy),1)
             pygame.draw.line(windowSurfaceObj,(255,255,255),(xx,xy-int(histarea/2)),(xx,xy+int(histarea/2)),1)
@@ -1169,6 +1132,44 @@ while True:
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_height * 0.51),int(preview_width * 0.15),int(preview_height * 0.33),int(preview_width * 0.45)),gw)
                 elif Pi_Cam == 2 and ((vwidth == 640 and vheight == 480) or (vwidth == 720 and vheight == 540)):
                     pygame.draw.rect(windowSurfaceObj,(155,0,150),Rect(int(preview_height * 0.50),int(preview_width * 0.22),int(preview_height * 0.33),int(preview_width * 0.31)),gw)
+        # ARDUCAM AF
+        if (Pi_Cam == 5 or Pi_Cam == 6) and foc_man == 0 and fcount < max_fcount:
+                image2 = pygame.surfarray.pixels3d(image)
+                crop2 = image2[xx-histarea:xx+histarea,xy-histarea:xy+histarea]
+                gray = cv2.cvtColor(crop2,cv2.COLOR_RGB2GRAY)
+                foc = cv2.Laplacian(gray, cv2.CV_64F).var()
+                for f in range(0,len(video_limits)-1,3):
+                    if video_limits[f] == 'focus':
+                        pmin = video_limits[f+1]
+                        pmax = video_limits[f+2]
+                if foc >= 50:
+                    ran = 0
+                else:
+                    focus = random.randint(100, 4000)
+                    fcount = 1
+                    ran = 1
+                    old_foc = foc
+                if (int(foc) >= int(old_foc) or fcount == 0) and ran == 0:
+                    if fcount == 0:
+                        if focus < 2000:
+                            focus  += fstep
+                        else:
+                            focus  -= fstep
+                    else:        
+                        focus  += fstep
+                elif ran == 0:
+                    fstep = -fstep
+                    focus += fstep
+                old_foc = foc
+                focus = max(pmin,focus)
+                focus = min(pmax,focus)
+                text(20,1,3,2,0,"Ctrl : " + str(int(focus)),fv* 2,0)
+                if focus < 100 or focus > 4000:
+                    focus = 2000
+                    fcount = 0
+                os.system("v4l2-ctl -d /dev/v4l-subdev1 -c focus_absolute=" + str(focus))
+                time.sleep(.5)
+                fcount += 1
         pygame.display.update()
 
     
