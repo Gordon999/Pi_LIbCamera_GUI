@@ -47,7 +47,7 @@ FDN            = 16  # Pi v3 camera Focus DN GPIO button
 sq_dis = 0
 
 # set default values (see limits below)
-rotate      = 1       # rotate preview ONLY, 0 = none, 1 = 90, 2 = 180, 3 = 270
+rotate      = 0       # rotate preview ONLY, 0 = none, 1 = 90, 2 = 180, 3 = 270
 camera      = 0       # choose camera to use
 stream_port = 5000    # set video streaming port number
 mode        = 1       # set camera mode ['manual','normal','sport'] 
