@@ -2750,8 +2750,10 @@ while True:
                         while (time.monotonic() - start_video < vlen or vlen == 0) and stop == 0:
                             if vlen != 0:
                                 vlength = int(vlen - (time.monotonic()-start_video))
-                                td = timedelta(seconds=vlength)
-                                text(1,1,1,1,1,str(td),fv,11)
+                            else:
+                                vlength = int(time.monotonic()-start_video)
+                            td = timedelta(seconds=vlength)
+                            text(1,1,1,1,1,str(td),fv,11)
                             for event in pygame.event.get():
                                 if (event.type == MOUSEBUTTONUP):
                                     mousex, mousey = event.pos
@@ -2880,12 +2882,15 @@ while True:
                             zxo = ((igw/2)-(preview_width/2))/igw
                             zyo = ((igh/2)-(preview_height/2))/igh
                             rpistr += " --roi " + str(zxo) + "," + str(zyo) + "," + str(preview_width/igw) + "," + str(preview_height/igh)                            
-                        print (rpistr)
+                        #print (rpistr)
                         p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
                         start_video = time.monotonic()
                         stop = 0
-                        while time.monotonic() - start_video < vlen and stop == 0:
-                            vlength = int(vlen - (time.monotonic()-start_video))
+                        while (time.monotonic() - start_video < vlen or vlen == 0) and stop == 0:
+                            if vlen != 0:
+                                vlength = int(vlen - (time.monotonic()-start_video))
+                            else:
+                                vlength = int(time.monotonic()-start_video)
                             td = timedelta(seconds=vlength)
                             text(1,1,1,1,1,str(td),fv,11)
                             for event in pygame.event.get():
