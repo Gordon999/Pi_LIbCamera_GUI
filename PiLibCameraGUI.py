@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-# version v4.61
+version  = 4.62
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -47,7 +47,7 @@ FDN            = 16  # Pi v3 camera Focus DN GPIO button
 sq_dis = 0
 
 # set default values (see limits below)
-rotate      = 0       # rotate preview ONLY, 0 = none, 1 = 90, 2 = 180, 3 = 270
+rotate      = 0      # rotate preview ONLY, 0 = none, 1 = 90, 2 = 180, 3 = 270
 camera      = 0       # choose camera to use
 stream_port = 5000    # set video streaming port number
 mode        = 1       # set camera mode ['manual','normal','sport'] 
@@ -162,7 +162,7 @@ histograms   = ["OFF","Red","Green","Blue","Lum","ALL"]
 still_limits = ['mode',0,len(modes)-1,'speed',0,len(shutters)-1,'gain',0,30,'brightness',-100,100,'contrast',0,200,'ev',-10,10,'blue',1,80,'sharpness',0,30,
                 'denoise',0,len(denoises)-1,'quality',0,100,'red',1,80,'extn',0,len(extns)-1,'saturation',0,20,'meter',0,len(meters)-1,'awb',0,len(awbs)-1,
                 'histogram',0,len(histograms)-1,'v3_f_speed',0,len(v3_f_speeds)-1]
-video_limits = ['vlen',1,36000,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'zoom',0,5,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,
+video_limits = ['vlen',0,3600,'fps',1,40,'focus',0,4096,'vformat',0,7,'0',0,0,'zoom',0,5,'Focus',0,1,'tduration',1,9999,'tinterval',0,999,'tshots',1,999,
                 'flicker',0,3,'codec',0,len(codecs)-1,'profile',0,len(h264profiles)-1,'v3_focus',0,1023,'histarea',10,50,'v3_f_range',0,len(v3_f_ranges)-1]
 
 # check config_file exists, if not then write default values
@@ -378,7 +378,7 @@ else:
         windowSurfaceObj = pygame.display.set_mode((preview_width + (bw*2),dis_height), pygame.NOFRAME, 24)
     else:
         windowSurfaceObj = pygame.display.set_mode((preview_width,dis_height), pygame.NOFRAME, 24)
-pygame.display.set_caption('Pi LibCamera GUI - ' + cameras[Pi_Cam] + " Camera")
+pygame.display.set_caption('Pi LibCamera GUI - v' + str(version) + "  " + cameras[Pi_Cam] + " Camera" )
 
 global greyColor, redColor, greenColor, blueColor, dgryColor, lgrnColor, blackColor, whiteColor, purpleColor, yellowColor,lpurColor,lyelColor
 bredColor =   pygame.Color(255,   0,   0)
@@ -2747,10 +2747,11 @@ while True:
                         p = subprocess.Popen(rpistr, shell=True, preexec_fn=os.setsid)
                         start_video = time.monotonic()
                         stop = 0
-                        while time.monotonic() - start_video < vlen and stop == 0:
-                            vlength = int(vlen - (time.monotonic()-start_video))
-                            td = timedelta(seconds=vlength)
-                            text(1,1,1,1,1,str(td),fv,11)
+                        while (time.monotonic() - start_video < vlen or vlen == 0) and stop == 0:
+                            if vlen != 0:
+                                vlength = int(vlen - (time.monotonic()-start_video))
+                                td = timedelta(seconds=vlength)
+                                text(1,1,1,1,1,str(td),fv,11)
                             for event in pygame.event.get():
                                 if (event.type == MOUSEBUTTONUP):
                                     mousex, mousey = event.pos
