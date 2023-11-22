@@ -30,7 +30,7 @@ from datetime import timedelta
 import numpy as np
 import math
 
-version  = 4.62
+version  = 4.63
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -216,7 +216,7 @@ v3_f_range  = config[30]
 
 def Camera_Version():
   # Check for Pi Camera version
-  global mag,max_gain,max_shutter,Pi_Cam,igw,camera,FUP,FDN,GPIO,still_limits
+  global mag,max_gain,max_shutter,Pi_Cam,igw,camera,FUP,FDN,GPIO,still_limits,buttonFUP,buttonFDN
   if os.path.exists('test.jpg'):
       os.rename('test.jpg', 'oldtest.jpg')
   rpistr = "libcamera-jpeg --camera " + str(camera) + " -n -t 1000 -e jpg -o test.jpg "
@@ -244,11 +244,10 @@ def Camera_Version():
         max_shutter = max_v3
         mag = 16
         max_gain = 64
-        import RPi.GPIO as GPIO
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(FUP,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_up, button to gnd
-        GPIO.setup(FDN,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_dn, button to gnd
+        from gpiozero import Button
+        buttonFUP = Button(FUP)
+        buttonFDN = Button(FDN)
+        
     elif igw == 4056:
         Pi_Cam = 4
         mag = 22
@@ -869,7 +868,7 @@ while True:
     time.sleep(0.1)
     # focus UP
     if Pi_Cam == 3:
-      if GPIO.input(FUP)== 0:
+      if buttonFUP.is_pressed:
         if v3_f_mode != 1:
             v3_focus_manual()
         v3_focus += 1
@@ -881,7 +880,7 @@ while True:
 
     # focus DOWN
     if Pi_Cam == 3:
-      if GPIO.input(FDN)== 0:
+      if buttonFDN.is_pressed:
         if v3_f_mode != 1:
             v3_focus_manual()
         v3_focus -= 1
@@ -2403,7 +2402,7 @@ while True:
                            f.write("%s\n" % item)
                    time.sleep(1)
                    text(1,13,2,1,1,"Config",fv,7)
-                else: 
+                else:
                    os.killpg(p.pid, signal.SIGTERM)
                    pygame.display.quit()
                    sys.exit()
