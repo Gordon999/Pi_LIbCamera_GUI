@@ -32,7 +32,7 @@ import math
 import random
 
 
-# version v4.60ard
+# version v4.61ard
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -222,7 +222,7 @@ v3_f_range  = config[30]
 
 def Camera_Version():
   # Check for Pi Camera version
-  global mag,max_gain,max_shutter,Pi_Cam,igw,camera,FUP,FDN,GPIO,still_limits
+  global mag,max_gain,max_shutter,Pi_Cam,igw,camera,FUP,FDN,still_limits,buttonFUP,buttonFDN
   if os.path.exists('test.jpg'):
       os.rename('test.jpg', 'oldtest.jpg')
   rpistr = "libcamera-jpeg --camera " + str(camera) + " -n -t 1000 -e jpg -o test.jpg "
@@ -250,11 +250,9 @@ def Camera_Version():
         max_shutter = max_v3
         mag = 16
         max_gain = 64
-        import RPi.GPIO as GPIO
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(FUP,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_up, button to gnd
-        GPIO.setup(FDN,GPIO.IN, pull_up_down=GPIO.PUD_UP) # v3_focus_dn, button to gnd
+        from gpiozero import Button
+        buttonFUP = Button(FUP)
+        buttonFDN = Button(FDN)
     elif igw == 4056:
         Pi_Cam = 4
         mag = 22
@@ -265,21 +263,17 @@ def Camera_Version():
         mag = 16
         max_gain = 64
         max_shutter = max_16mp
-        import RPi.GPIO as GPIO
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(FUP,GPIO.IN, pull_up_down=GPIO.PUD_UP) # focus_up, button to gnd
-        GPIO.setup(FDN,GPIO.IN, pull_up_down=GPIO.PUD_UP) # focus_dn, button to gnd
+        from gpiozero import Button
+        buttonFUP = Button(FUP)
+        buttonFDN = Button(FDN)
     elif igw == 9152 or igw == 4624:
         Pi_Cam = 6
         mag = 16
         max_gain = 64
         max_shutter = max_64mp
-        import RPi.GPIO as GPIO
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(FUP,GPIO.IN, pull_up_down=GPIO.PUD_UP) # focus_up, button to gnd
-        GPIO.setup(FDN,GPIO.IN, pull_up_down=GPIO.PUD_UP) # focus_dn, button to gnd
+        from gpiozero import Button
+        buttonFUP = Button(FUP)
+        buttonFDN = Button(FDN)
     elif igw == 1456:
         Pi_Cam = 7
         mag = 16
@@ -880,7 +874,7 @@ while True:
     time.sleep(0.1)
     # focus UP
     if Pi_Cam == 3:
-      if GPIO.input(FUP)== 0:
+      if buttonFUP.is_pressed:
         if v3_f_mode != 1:
             v3_focus_manual()
         v3_focus += 1
@@ -890,7 +884,7 @@ while True:
         text(1,7,3,0,1,'<<< ' + str(v3_focus) + ' >>>',fv,0)
         time.sleep(0.25)
         
-    if (Pi_Cam == 5 or Pi_Cam == 6) and (GPIO.input(FUP) == 0 or GPIO.input(FDN) == 0):
+    if (Pi_Cam == 5 or Pi_Cam == 6) and (buttonFUP.is_pressed or buttonFDN.is_pressed):
         if foc_man == 0:
             for f in range(0,len(video_limits)-1,3):
                 if video_limits[f] == 'focus':
@@ -900,9 +894,9 @@ while True:
             foc_man = 1 # manual focus
             zoom = 0
             button(1,7,1,9)
-        if GPIO.input(FDN) == 0:
+        if buttonFDN.is_pressed:
             focus -= 10
-        if GPIO.input(FUP) == 0:
+        if buttonFUP.is_pressed:
             focus += 10
         focus = max(pmin,focus)
         focus = min(pmax,focus)
@@ -914,7 +908,7 @@ while True:
 
     # focus DOWN
     if Pi_Cam == 3:
-      if GPIO.input(FDN)== 0:
+      if buttonFDN.is_pressed:
         if v3_f_mode != 1:
             v3_focus_manual()
         v3_focus -= 1
