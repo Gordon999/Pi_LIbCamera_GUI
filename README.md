@@ -10,7 +10,7 @@ Script to allow control of a Pi Camera. Will work with all Pi camera models, v1,
 (Note for Arducam cameras you need to follow their installation instructions https://docs.arducam.com/Raspberry-Pi-Camera/Native-camera/Quick-Start-Guide/ 
 and install their version of libcamera, or try PiLibcameraGUI_Ard.py and the standard Libcamera)
 
-I have only tested switching 2 cameras on a Pi5 with official Pi Cameras.
+I have only tested switching 2 cameras on a Pi5 with official Pi Cameras. It will work with different models of camera
 
 ## Screenshot
 
