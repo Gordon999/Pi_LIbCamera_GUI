@@ -29,8 +29,9 @@ import glob
 from datetime import timedelta
 import numpy as np
 import math
+from gpiozero import Button
 
-version  = 4.63
+version  = 4.64
 
 # Set displayed preview image size (must be less than screen size to allow for the menu!!)
 # Recommended 640x480 (Pi 7" or other 800x480 screen), 720x540 (FOR SQUARE HYPERPIXEL DISPLAY),
@@ -119,6 +120,8 @@ igw         = 2592
 igh         = 1944
 zwidth      = igw 
 zheight     = igh
+buttonFUP   = Button(FUP)
+buttonFDN   = Button(FDN)
 if tinterval > 0:
     tduration  = tshots * tinterval
 else:
@@ -244,10 +247,6 @@ def Camera_Version():
         max_shutter = max_v3
         mag = 16
         max_gain = 64
-        from gpiozero import Button
-        buttonFUP = Button(FUP)
-        buttonFDN = Button(FDN)
-        
     elif igw == 4056:
         Pi_Cam = 4
         mag = 22
@@ -377,7 +376,7 @@ else:
         windowSurfaceObj = pygame.display.set_mode((preview_width + (bw*2),dis_height), pygame.NOFRAME, 24)
     else:
         windowSurfaceObj = pygame.display.set_mode((preview_width,dis_height), pygame.NOFRAME, 24)
-pygame.display.set_caption('Pi LibCamera GUI - v' + str(version) + "  " + cameras[Pi_Cam] + " Camera" )
+pygame.display.set_caption('Pi LibCamera GUI')
 
 global greyColor, redColor, greenColor, blueColor, dgryColor, lgrnColor, blackColor, whiteColor, purpleColor, yellowColor,lpurColor,lyelColor
 bredColor =   pygame.Color(255,   0,   0)
