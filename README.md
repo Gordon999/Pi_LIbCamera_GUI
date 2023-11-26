@@ -2,6 +2,8 @@
 
 To work with RaspiOS based on BULLSEYE / BOOKWORM, using libcamera (NOT raspistill/raspivid).
 
+NOTE: Currently this will NOT record .h264 video on a Pi5. Awaiting a fix !!
+
 preview uses libcamera-vid (so may not be as sharp as captured stills), stills libcamera-still, videos libcamera-vid, timelapses depends on timings and settings, libcamera-still, -vid or -raw. Note preview has a maximum shutter setting of 1 second.
 
 At your own risk !!. Ensure you have any required software backed up.
