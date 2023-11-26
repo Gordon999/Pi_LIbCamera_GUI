@@ -2687,7 +2687,8 @@ while True:
                                 rpistr += " --codec " + codecs[codec]
                             else:
                                 prof = h264profiles[profile].split(" ")
-                                rpistr += " --profile " + str(prof[0]) + " --level " + str(prof[1])
+                                #rpistr += " --profile " + str(prof[0]) + " --level " + str(prof[1])
+                                rpistr += " --level " + str(prof[1])
                         else:
                             rpistr = "libcamera-raw --camera " + str(camera) + " -t " + str(vlen * 1000) + " -o " + vname + " --framerate " + str(fps)
                         if vpreview == 0:
