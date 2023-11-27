@@ -2,7 +2,7 @@
 
 To work with RaspiOS based on BULLSEYE / BOOKWORM, using libcamera (NOT raspistill/raspivid).
 
-NOTE: Moving to https://github.com/Gordon999/RPiCamGUI with renaming libcamera on the pi to rpicam
+# NOTE: This won't be developed further, replaced by https://github.com/Gordon999/RPiCamGUI with renaming libcamera on the pi to rpicam
 
 preview uses libcamera-vid (so may not be as sharp as captured stills), stills libcamera-still, videos libcamera-vid, timelapses depends on timings and settings, libcamera-still, -vid or -raw. Note preview has a maximum shutter setting of 1 second.
 
